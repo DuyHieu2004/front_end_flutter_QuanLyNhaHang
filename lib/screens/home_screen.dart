@@ -8,6 +8,8 @@ import '../services/menu_service.dart';
 import '../services/api_constants.dart';
 import '../models/menu.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -74,6 +76,10 @@ class _HomeDrawer extends StatelessWidget {
               title: const Text('Thực đơn'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MenuScreen()),
+                );
               },
             ),
             ListTile(
@@ -236,7 +242,10 @@ class _HeroSection extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   height: 1.3,
                 ),
-              ),
+              )
+                  .animate()
+                  .fadeIn(duration: 600.ms)
+                  .slideX(begin: -0.2, end: 0),
               const SizedBox(height: 8),
               const Text(
                 "Khám phá hương vị truyền thống\ntrong không gian sang trọng, ấm cúng.",
@@ -245,51 +254,57 @@ class _HeroSection extends StatelessWidget {
                   fontSize: 14,
                   height: 1.4,
                 ),
-              ),
+              )
+                  .animate()
+                  .fadeIn(delay: 200.ms, duration: 600.ms)
+                  .slideX(begin: -0.2, end: 0),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => DatBanScreen()),
                         );
                       },
-                      child: const Text(
-                        "Đặt bàn ngay",
-                        style: TextStyle(fontSize: 15),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white70),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
+                      child: const Text("Đặt bàn ngay"),
+                    )
+                        .animate()
+                        .fadeIn(delay: 400.ms, duration: 600.ms)
+                        .scale(begin: const Offset(0.8, 0.8)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
                       onPressed: () {
-                        // TODO: Điều hướng tới màn hình thực đơn chi tiết
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => MenuScreen()),
+                        );
                       },
-                      child: const Text(
-                        "Xem thực đơn",
-                        style: TextStyle(fontSize: 15),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white70),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
                       ),
-                    ),
+                      child: const Text("Xem thực đơn"),
+                    )
+                        .animate()
+                        .fadeIn(delay: 500.ms, duration: 600.ms)
+                        .scale(begin: const Offset(0.8, 0.8)),
                   ),
                 ],
               )
@@ -297,7 +312,10 @@ class _HeroSection extends StatelessWidget {
           ),
         ),
       ),
-    );
+    )
+        .animate()
+        .fadeIn(duration: 800.ms)
+        .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1));
   }
 }
 
@@ -362,56 +380,278 @@ class _SpecialMenuList extends StatelessWidget {
     required this.onRetry,
   });
 
+  void _showMenuDetail(BuildContext context, Menu menu) {
+    final imageUrl = menu.hinhAnh != null && menu.hinhAnh!.isNotEmpty
+        ? (menu.hinhAnh!.startsWith('http')
+            ? menu.hinhAnh!
+            : '${ApiConstants.imageBaseUrl}${menu.hinhAnh!.startsWith('/') ? '' : '/'}${menu.hinhAnh}')
+        : null;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          menu.tenMenu,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (menu.loaiMenu != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              menu.loaiMenu!,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Image
+                    if (imageUrl != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          imageUrl,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              color: Colors.grey.shade200,
+                              child: const Icon(Icons.restaurant_menu, size: 64),
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    
+                    // Price
+                    if (menu.giaMenu != null) ...[
+                      const Text(
+                        'Giá',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text(
+                            '${NumberFormat("#,###").format(menu.giaMenu!.toInt())} đ',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.indigo.shade600,
+                            ),
+                          ),
+                          if (menu.giaGoc != null && menu.giaGoc! > menu.giaMenu!) ...[
+                            const SizedBox(width: 16),
+                            Text(
+                              NumberFormat("#,###").format(menu.giaGoc!.toInt()),
+                              style: TextStyle(
+                                fontSize: 18,
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                            if (menu.phanTramGiamGia != null && menu.phanTramGiamGia! > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Giảm ${menu.phanTramGiamGia!.toStringAsFixed(0)}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.red.shade700,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    
+                    // Description
+                    if (menu.moTa != null && menu.moTa!.isNotEmpty) ...[
+                      const Text(
+                        'Mô tả',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        menu.moTa!,
+                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    
+                    // Chi tiết món
+                    if (menu.chiTietMenus != null && menu.chiTietMenus!.isNotEmpty) ...[
+                      Text(
+                        'Danh sách món (${menu.chiTietMenus!.length})',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...menu.chiTietMenus!.map((ct) {
+                        final imageUrl = ct.monAn?.hinhAnh != null
+                            ? (ct.monAn!.hinhAnh!.startsWith('http')
+                                ? ct.monAn!.hinhAnh!
+                                : '${ApiConstants.imageBaseUrl}${ct.monAn!.hinhAnh!.startsWith('/') ? '' : '/'}${ct.monAn!.hinhAnh}')
+                            : null;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              if (imageUrl != null)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    imageUrl,
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 64,
+                                        height: 64,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(Icons.restaurant_menu),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              if (imageUrl != null) const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      ct.monAn?.tenMonAn ?? 'N/A',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (ct.ghiChu != null && ct.ghiChu!.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          ct.ghiChu!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (ct.monAn?.gia != null)
+                                Text(
+                                  '${NumberFormat("#,###").format(ct.monAn!.gia!.toInt())} đ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.indigo.shade600,
+                                  ),
+                                ),
+                              if (ct.soLuong != null && ct.soLuong! > 1)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Text(
+                                    'x${ct.soLuong}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const SizedBox(
-        height: 200,
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return _buildShimmerLoading();
     }
 
     if (error != null) {
-      return SizedBox(
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 8),
-              Text(
-                "Không thể tải menu",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: onRetry,
-                child: const Text("Thử lại"),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildErrorState();
     }
 
     if (menus.isEmpty) {
-      return const SizedBox(
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.restaurant_menu, size: 48, color: Colors.grey),
-              SizedBox(height: 8),
-              Text(
-                "Hiện tại chưa có menu đặc biệt nào.",
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildEmptyState();
     }
 
     // Hiển thị tối đa 6 menu
@@ -430,16 +670,150 @@ class _SpecialMenuList extends StatelessWidget {
       itemCount: displayMenus.length,
       itemBuilder: (context, index) {
         final menu = displayMenus[index];
-        return _MenuCard(menu: menu);
+        return _MenuCard(
+          menu: menu,
+          index: index,
+          onTap: () => _showMenuDetail(context, menu),
+        );
       },
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.7,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 14,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 12,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState() {
+    return SizedBox(
+      height: 200,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.grey[400])
+                .animate()
+                .shake(duration: 600.ms)
+                .then()
+                .fadeIn(),
+            const SizedBox(height: 16),
+            Text(
+              "Không thể tải menu",
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ).animate().fadeIn(delay: 200.ms),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: onRetry,
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text("Thử lại"),
+            ).animate().fadeIn(delay: 400.ms).scale(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return SizedBox(
+      height: 200,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.restaurant_menu, size: 64, color: Colors.grey[300]!)
+                .animate()
+                .scale(delay: 200.ms, duration: 600.ms)
+                .then()
+                .shimmer(delay: 300.ms, duration: 1200.ms),
+            const SizedBox(height: 16),
+            Text(
+              "Hiện tại chưa có menu đặc biệt nào.",
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ).animate().fadeIn(delay: 400.ms),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class _MenuCard extends StatelessWidget {
   final Menu menu;
+  final int index;
+  final VoidCallback onTap;
 
-  const _MenuCard({required this.menu});
+  const _MenuCard({
+    required this.menu,
+    required this.index,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -447,82 +821,74 @@ class _MenuCard extends StatelessWidget {
     final imageUrl = menu.hinhAnh != null && menu.hinhAnh!.isNotEmpty
         ? (menu.hinhAnh!.startsWith('http')
             ? menu.hinhAnh!
-            : '${ApiConstants.imageBaseUrl}${menu.hinhAnh}')
+            : '${ApiConstants.imageBaseUrl}${menu.hinhAnh!.startsWith('/') ? '' : '/'}${menu.hinhAnh}')
         : null;
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => MenuScreen()),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      margin: EdgeInsets.zero,
+      color: Colors.white,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Hình ảnh menu
+            // Hình ảnh menu với animation
             Expanded(
               flex: 3,
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: colorScheme.primary.withOpacity(0.1),
-                          child: Icon(
-                            Icons.restaurant_menu,
-                            size: 40,
-                            color: colorScheme.primary,
-                          ),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: Colors.grey.shade100,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: imageUrl != null
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: colorScheme.primary.withOpacity(0.1),
+                            child: Icon(
+                              Icons.restaurant_menu,
+                              size: 40,
+                              color: colorScheme.primary,
                             ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) {
+                            return child.animate()
+                                .fadeIn(delay: (index * 100).ms, duration: 400.ms)
+                                .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1));
+                          }
+                          return Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: Container(
+                              color: Colors.grey.shade100,
+                            ),
+                          );
+                        },
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              colorScheme.primary.withOpacity(0.1),
+                              colorScheme.primary.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        );
-                      },
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            colorScheme.primary.withOpacity(0.1),
-                            colorScheme.primary.withOpacity(0.05),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        ),
+                        child: Icon(
+                          Icons.restaurant_menu,
+                          size: 40,
+                          color: colorScheme.primary,
                         ),
                       ),
-                      child: Icon(
-                        Icons.restaurant_menu,
-                        size: 40,
-                        color: colorScheme.primary,
-                      ),
-                    ),
+              ),
             ),
             // Thông tin menu
             Expanded(

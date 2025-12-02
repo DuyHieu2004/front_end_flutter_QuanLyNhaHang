@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:front_end_app/http_override.dart';
 import 'package:front_end_app/providers/auth_provider.dart';
 import 'package:front_end_app/screens/splash_screen.dart';
@@ -27,37 +28,38 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    final baseColorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF3B82F6), // Gần với primary indigo trên web
-      brightness: Brightness.light,
-    );
-
     return MaterialApp(
       title: 'Quản Lý Nhà Hàng',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
+      theme: FlexThemeData.light(
+        scheme: FlexScheme.deepPurple,
+        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+        blendLevel: 7,
+        subThemesData: const FlexSubThemesData(
+          blendOnLevel: 10,
+          blendOnColors: false,
+          useTextTheme: true,
+          useM2StyleDividerInM3: true,
+          alignedDropdown: true,
+          useInputDecoratorThemeInDialogs: true,
+        ),
+        visualDensity: FlexColorScheme.comfortablePlatformDensity,
         useMaterial3: true,
-        colorScheme: baseColorScheme,
-        scaffoldBackgroundColor: baseColorScheme.background,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: AppBarTheme(
-          backgroundColor: baseColorScheme.background,
-          foregroundColor: baseColorScheme.onBackground,
+        swapLegacyOnMaterial3: true,
+      ).copyWith(
+        appBarTheme: const AppBarTheme(
           elevation: 0,
           centerTitle: true,
-          titleTextStyle: const TextStyle(
+          titleTextStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: baseColorScheme.primary,
-            foregroundColor: baseColorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
             textStyle: const TextStyle(
               fontSize: 16,
@@ -67,28 +69,34 @@ class MyApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(
-              color: baseColorScheme.outline,
-            ),
+            borderRadius: BorderRadius.circular(12),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(
-              color: baseColorScheme.outlineVariant,
-            ),
+            borderRadius: BorderRadius.circular(12),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(
-              color: baseColorScheme.primary,
-              width: 1.6,
-            ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(width: 2),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
+      darkTheme: FlexThemeData.dark(
+        scheme: FlexScheme.deepPurple,
+        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+        blendLevel: 13,
+        subThemesData: const FlexSubThemesData(
+          blendOnLevel: 20,
+          useTextTheme: true,
+          useM2StyleDividerInM3: true,
+          alignedDropdown: true,
+          useInputDecoratorThemeInDialogs: true,
+        ),
+        visualDensity: FlexColorScheme.comfortablePlatformDensity,
+        useMaterial3: true,
+        swapLegacyOnMaterial3: true,
+      ),
+      themeMode: ThemeMode.light,
       home: SplashScreen(),
     );
   }

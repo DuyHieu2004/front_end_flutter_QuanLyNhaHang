@@ -9,10 +9,8 @@ class HistoryScreen extends StatefulWidget {
   _HistoryScreenState createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProviderStateMixin {
+class _HistoryScreenState extends State<HistoryScreen> {
   final AuthService _authService = AuthService();
-  late TabController _tabController;
-  late Future<List<dynamic>> _historyFuture;
   
   // Tra cứu bằng số điện thoại
   final _phoneController = TextEditingController();
@@ -21,23 +19,9 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
   List<dynamic> _searchBookings = [];
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _loadHistory();
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _phoneController.dispose();
     super.dispose();
-  }
-
-  void _loadHistory() {
-    setState(() {
-      _historyFuture = _authService.getMyBookingHistory();
-    });
   }
 
   Future<void> _searchByPhone() async {
@@ -107,8 +91,10 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
           // (Thay thế cho showDialog cũ)
           QuickAlertService.showAlertSuccess(context, "Hủy đặt bàn thành công!");
 
-          // 6. Load lại danh sách lịch sử ngay lập tức
-          _loadHistory();
+          // 6. Reload lại kết quả tra cứu nếu đang có
+          if (_searchResult != null && _phoneController.text.isNotEmpty) {
+            _searchByPhone();
+          }
 
         } catch (e) {
           // Xử lý lỗi
@@ -241,52 +227,6 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildMyHistoryTab() {
-    return FutureBuilder<List<dynamic>>(
-        future: _historyFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text("Lỗi tải lịch sử: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Text("Bạn chưa có lịch sử đặt bàn nào.", style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-            );
-          }
-
-          var bookings = snapshot.data!;
-          if (bookings.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Bạn chưa có lịch sử đặt bàn nào.",
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async => _loadHistory(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: bookings.length,
-              itemBuilder: (context, index) => _buildBookingCard(bookings[index]),
-            ),
-          );
-        },
-      );
-  }
-
   Widget _buildSearchTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -417,21 +357,8 @@ class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProvider
       appBar: AppBar(
         title: const Text("Lịch Sử Đặt Bàn"),
         backgroundColor: Colors.deepPurple,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.person), text: "Của tôi"),
-            Tab(icon: Icon(Icons.search), text: "Tra cứu"),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMyHistoryTab(),
-          _buildSearchTab(),
-        ],
-      ),
+      body: _buildSearchTab(),
     );
   }
 }
