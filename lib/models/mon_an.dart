@@ -16,13 +16,17 @@ class MonAn {
   });
 
   factory MonAn.fromJson(Map<String, dynamic> json) {
-    var hinhAnhList = json['hinhAnhMonAns'] as List;
-    List<HinhAnhMonAn> images = hinhAnhList.map((i) => HinhAnhMonAn.fromJson(i)).toList();
+    // Đảm bảo danh sách hình ảnh không bị null
+    final hinhAnhList = (json['hinhAnhMonAns'] as List?) ?? [];
+    final images =
+        hinhAnhList.map((i) => HinhAnhMonAn.fromJson(i)).toList();
 
     return MonAn(
       maMonAn: json['maMonAn'],
       tenMonAn: json['tenMonAn'],
-      gia: (json['gia'] as num).toDouble(),
+      // Tránh lỗi "type 'Null' is not a subtype of type 'num' in type cast"
+      // Nếu backend trả null hoặc kiểu không phải number, gán mặc định = 0
+      gia: (json['gia'] is num) ? (json['gia'] as num).toDouble() : 0.0,
       maDanhMuc: json['maDanhMuc'],
       hinhAnhMonAns: images,
     );

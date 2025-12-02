@@ -204,10 +204,68 @@ class _DatBanScreenState extends State<DatBanScreen> {
                   );
                 }
 
+                // Tính tổng sức chứa đã chọn
+                final totalSelectedCapacity = _selectedTablesList.fold(
+                  0, 
+                  (sum, table) => sum + (table.sucChua ?? 0)
+                );
+                final remainingGuests = _selectedSoNguoi > 0 
+                    ? (_selectedSoNguoi - totalSelectedCapacity).clamp(0, double.infinity).toInt()
+                    : 0;
+                final hasEnoughCapacity = _selectedTableIds.isNotEmpty && totalSelectedCapacity >= _selectedSoNguoi;
+
                 // 3. Hiển thị Grid
                 return RefreshIndicator(
                   onRefresh: () async => _loadFilteredTables(),
-                  child: GridView.builder(
+                  child: Column(
+                    children: [
+                      // Hiển thị thông tin tổng sức chứa đã chọn
+                      if (_selectedTableIds.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: hasEnoughCapacity 
+                                ? Colors.green.shade50 
+                                : Colors.orange.shade50,
+                            border: Border.all(
+                              color: hasEnoughCapacity 
+                                  ? Colors.green 
+                                  : Colors.orange,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tổng sức chứa đã chọn: $totalSelectedCapacity / $_selectedSoNguoi khách',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (_selectedTableIds.isEmpty)
+                                const Text(
+                                  'Vui lòng chọn ít nhất một bàn để gửi yêu cầu đặt chỗ.',
+                                  style: TextStyle(color: Colors.orange),
+                                )
+                              else if (remainingGuests > 0)
+                                Text(
+                                  'Còn thiếu $remainingGuests chỗ. Vui lòng chọn thêm bàn hoặc giảm số khách.',
+                                  style: const TextStyle(color: Colors.orange),
+                                )
+                              else
+                                const Text(
+                                  'Đã đủ chỗ cho khách. Bạn vẫn có thể ghi chú thêm yêu cầu đặc biệt.',
+                                  style: TextStyle(color: Colors.green),
+                                ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: GridView.builder(
                     padding: const EdgeInsets.all(12.0),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
@@ -220,6 +278,9 @@ class _DatBanScreenState extends State<DatBanScreen> {
                       final banAn = displayBanAns[index];
                       return _buildTableCard(context, banAn);
                     },
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -228,53 +289,104 @@ class _DatBanScreenState extends State<DatBanScreen> {
           _buildLegend(),
         ],
       ),
-      // Nút đặt bàn nổi
+      // Nút đặt bàn nổi với validation
       floatingActionButton: _selectedTableIds.isNotEmpty
-          ? FloatingActionButton.extended(
-        label: const Text("Đặt bàn"),
-        icon: const Icon(Icons.check),
-        backgroundColor: Colors.deepPurple,
-        onPressed: () async {
-          // 1. Kiểm tra: Nếu chưa chọn bàn nào thì báo lỗi
-          if (_selectedTablesList.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Vui lòng chọn ít nhất một bàn để tiếp tục!"),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 2),
-              ),
-            );
-            return;
-          }
+          ? Builder(
+              builder: (context) {
+                final totalCapacity = _selectedTablesList.fold(
+                  0, 
+                  (sum, table) => sum + (table.sucChua ?? 0)
+                );
+                final remainingGuests = _selectedSoNguoi > 0 
+                    ? (_selectedSoNguoi - totalCapacity).clamp(0, double.infinity).toInt()
+                    : 0;
+                final hasEnoughCapacity = totalCapacity >= _selectedSoNguoi;
+                
+                return FloatingActionButton.extended(
+                  label: Text(hasEnoughCapacity ? "Đặt bàn" : "Thiếu $remainingGuests chỗ"),
+                  icon: const Icon(Icons.check),
+                  backgroundColor: hasEnoughCapacity ? Colors.deepPurple : Colors.orange,
+                  onPressed: () async {
+                              // 1. Kiểm tra: Nếu chưa chọn bàn nào thì báo lỗi
+                              if (_selectedTablesList.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Vui lòng chọn ít nhất một bàn để tiếp tục!"),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              // 2. Kiểm tra đủ sức chứa
+                              final totalCapacity = _selectedTablesList.fold(
+                                0, 
+                                (sum, table) => sum + (table.sucChua ?? 0)
+                              );
+                              final remainingGuests = _selectedSoNguoi > 0 
+                                  ? (_selectedSoNguoi - totalCapacity).clamp(0, double.infinity).toInt()
+                                  : 0;
+                              
+                              if (remainingGuests > 0) {
+                                final shouldContinue = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text("Chưa đủ chỗ"),
+                                    content: Text(
+                                      "Bạn đi $_selectedSoNguoi người nhưng các bàn đã chọn chỉ chứa được $totalCapacity người.\n\n"
+                                      "Còn thiếu $remainingGuests chỗ. Bạn có muốn tiếp tục đặt bàn không?",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text("Chọn thêm bàn"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        child: const Text("Vẫn đặt", style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (shouldContinue != true) {
+                                  return;
+                                }
+                              }
 
-          // 2. Chuyển sang màn hình Form và CHỜ kết quả trả về (dùng await)
-          final bool? ketQuaDatBan = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DatBanFormScreen(
-                // Truyền danh sách bàn sang form
-                danhSachBan: List.from(_selectedTablesList),
-              ),
-            ),
-          );
+                              // 3. Chuyển sang màn hình Form và CHỜ kết quả trả về (dùng await)
+                              final bool? ketQuaDatBan = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DatBanFormScreen(
+                                    // Truyền danh sách bàn, số lượng người và thời gian sang form
+                                    danhSachBan: List.from(_selectedTablesList),
+                                    soNguoi: _selectedSoNguoi,
+                                    thoiGian: _selectedDateTime,
+                                  ),
+                                ),
+                              );
 
-          // 3. Kiểm tra kết quả: Nếu đặt thành công (trả về true) thì tải lại dữ liệu
-          if (ketQuaDatBan == true) {
-            print("--- Đã đặt bàn xong, đang tải lại danh sách bàn ---");
+                              // 4. Kiểm tra kết quả: Nếu đặt thành công (trả về true) thì tải lại dữ liệu
+                              if (ketQuaDatBan == true) {
+                                print("--- Đã đặt bàn xong, đang tải lại danh sách bàn ---");
 
-            // Gọi hàm này để API chạy lại -> Cập nhật màu bàn từ "Trống" sang "Của bạn"
-            _loadFilteredTables();
+                                // Gọi hàm này để API chạy lại -> Cập nhật màu bàn từ "Trống" sang "Của bạn"
+                                _loadFilteredTables();
 
-            // Hiện thông báo nhỏ bên dưới
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Cập nhật trạng thái bàn thành công!"),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-      )
+                                // Hiện thông báo nhỏ bên dưới
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Cập nhật trạng thái bàn thành công!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            },
+                  );
+                },
+              )
           : null,
     );
   }
@@ -555,8 +667,10 @@ class _DatBanScreenState extends State<DatBanScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => DatBanFormScreen(
-          // SỬA CHỖ NÀY: Truyền list bàn đã chọn qua
+          // Truyền danh sách bàn, số lượng người và thời gian
           danhSachBan: _selectedTablesList,
+          soNguoi: _selectedSoNguoi,
+          thoiGian: _selectedDateTime,
         ),
       ),
     ).then((result) {
@@ -587,15 +701,15 @@ class _DatBanScreenState extends State<DatBanScreen> {
           topRight: Radius.circular(16.0),
         ),
       ),
-        child: Wrap(
-            spacing: 8.0,
-            children: [
-              _buildLegendItem(Colors.green, 'Trống'),
-              _buildLegendItem(Colors.orange, 'Ghép'),
-              _buildLegendItem(Colors.purpleAccent, 'Của bạn'),
-              _buildLegendItem(Colors.red.shade200, 'Đã đặt'),
-            ]
-        )
+      child: Wrap(
+        spacing: 8.0,
+        children: [
+          _buildLegendItem(Colors.green, 'Trống'),
+          _buildLegendItem(Colors.orange, 'Ghép'),
+          _buildLegendItem(Colors.purpleAccent, 'Của bạn'),
+          _buildLegendItem(Colors.red.shade200, 'Đã đặt'),
+        ],
+      ),
     );
   }
 

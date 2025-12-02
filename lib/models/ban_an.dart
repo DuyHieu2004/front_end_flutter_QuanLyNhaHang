@@ -18,7 +18,10 @@ class BanAn {
       maBan: json['maBan'] as String,
       tenBan: json['tenBan'] as String,
       tenTrangThai: json['tenTrangThai'] as String?,
-      sucChua: json['sucChua'] as int,
+      // Nếu backend trả null hoặc không phải số, gán mặc định = 0
+      sucChua: (json['sucChua'] is num)
+          ? (json['sucChua'] as num).toInt()
+          : 0,
       tenTang: json['tenTang'],
     );
   }

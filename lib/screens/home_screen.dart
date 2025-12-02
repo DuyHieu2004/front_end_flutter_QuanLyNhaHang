@@ -1,223 +1,374 @@
 import 'package:flutter/material.dart';
-import 'package:front_end_app/services/auth_service.dart';
-import 'package:front_end_app/screens/login_screen.dart';
-// (Import các màn hình của bạn)
-import 'package:front_end_app/screens/dat_ban_screen.dart'; // (Tự tạo file này)
-import 'package:front_end_app/screens/history_screen.dart'; // (Tí nữa tui tạo)
+import 'package:front_end_app/screens/dat_ban_screen.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/menu_view_model.dart';
+import '../models/danh_muc.dart';
 
-
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final AuthService _authService = AuthService();
-  String _hoTen = "Đang tải...";
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  void _loadUserData() async {
-    String? hoTen = await _authService.getUserNameFromToken();
-    if (hoTen != null) {
-      setState(() {
-        _hoTen = hoTen;
-      });
-    }
-  }
-
-  void _logout() async {
-    await _authService.logout();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-          (route) => false,
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Trang chủ"),
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+      ),
+      drawer: const _HomeDrawer(),
+      body: const _HomeContent(),
     );
   }
+}
+
+class _HomeDrawer extends StatelessWidget {
+  const _HomeDrawer();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // 1. THANH APPBAR (ĐÃ SỬA)
-      appBar: AppBar(
-        title: Text("Trang chủ"),
-        backgroundColor: Colors.blue, // Thêm màu
-      ),
-
-      // 2. THANH MENU KÉO (DRAWER) (MỚI)
-      drawer: _buildDrawer(),
-
-      // 3. GIAO DIỆN "ĐẸP" (MỚI)
-      body: Container(
-        // Dùng Gradient (màu chuyển) cho đẹp
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue.shade100, Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Text chào mừng
-                Text(
-                  "Xin chào,",
-                  style: TextStyle(fontSize: 28, color: Colors.grey[700]),
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
                 ),
-                Text(
-                  _hoTen,
+              ),
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  "Nhà hàng Việt",
                   style: TextStyle(
-                    fontSize: 34,
+                    color: Colors.white,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue[800],
                   ),
                 ),
-                SizedBox(height: 60),
-
-                // 2 NÚT CHỨC NĂNG
-                _buildFunctionCard(
-                  context,
-                  icon: Icons.calendar_today,
-                  title: "Đặt Bàn Ngay",
-                  subtitle: "Tìm và đặt bàn nhanh chóng",
-                  onTap: () {
-                    // TODO: Đổi DatBanScreen() thành tên file của bạn
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => DatBanScreen()));
-                  },
-                ),
-                SizedBox(height: 20),
-                _buildFunctionCard(
-                  context,
-                  icon: Icons.history,
-                  title: "Lịch Sử Đặt Bàn",
-                  subtitle: "Xem lại hoặc hủy đặt bàn",
-                  onTap: () {
-                    // Chuyển sang màn hình Lịch sử (tí nữa tui code)
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen()));
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Trang chủ'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('Đặt bàn'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => DatBanScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.restaurant_menu_outlined),
+              title: const Text('Thực đơn'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  // --- WIDGET HELPER CHO DRAWER (MENU KÉO) ---
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          // Phần Header của Drawer
-          UserAccountsDrawerHeader(
-            accountName: Text(
-              _hoTen,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            accountEmail: Text("Khách hàng thành viên"), // (Lấy SĐT/Email nếu muốn)
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                _hoTen.isNotEmpty ? _hoTen[0].toUpperCase() : "A", // Chữ cái đầu
-                style: TextStyle(fontSize: 40.0, color: Colors.blue[800]),
-              ),
-            ),
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
-          ),
+class _HomeContent extends StatelessWidget {
+  const _HomeContent();
 
-          // Các mục menu
-          ListTile(
-            leading: Icon(Icons.home),
-            title: Text('Trang chủ'),
-            onTap: () {
-              Navigator.pop(context); // Đóng Drawer
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.person_outline),
-            title: Text('Thông tin cá nhân'),
-            onTap: () {
-              // TODO: Tạo trang ProfileScreen
-            },
-          ),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
-            title: Text(
-              'Đăng xuất',
-              style: TextStyle(color: Colors.red),
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Provider.of<MenuViewModel>(context, listen: false)
+            .fetchInitialData();
+      },
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _HeroSection(colorScheme: colorScheme),
+                const SizedBox(height: 16),
+                _MenuSectionTitle(colorScheme: colorScheme),
+              ],
             ),
-            onTap: _logout, // Gọi hàm đăng xuất
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: _SpecialMenuList(),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: const SizedBox(height: 24),
           ),
         ],
       ),
     );
   }
+}
 
-  // --- WIDGET HELPER CHO CÁI NÚT "ĐẸP" ---
-  Widget _buildFunctionCard(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required String subtitle,
-        required VoidCallback onTap,
-      }) {
-    return InkWell(
-      onTap: onTap,
+class _HeroSection extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _HeroSection({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Container(
-        padding: EdgeInsets.all(20.0),
+        height: 220,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
+          image: const DecorationImage(
+            image: AssetImage('assets/images/splash2.jpg'),
+            fit: BoxFit.cover,
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 40.0, color: Colors.blue[700]),
-            SizedBox(width: 20.0),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                Colors.black.withOpacity(0.55),
+                Colors.black.withOpacity(0.35),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "Trải Nghiệm Tinh Hoa\nẨm Thực Việt",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Khám phá hương vị truyền thống\ntrong không gian sang trọng, ấm cúng.",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => DatBanScreen()),
+                        );
+                      },
+                      child: const Text(
+                        "Đặt bàn ngay",
+                        style: TextStyle(fontSize: 15),
+                      ),
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white70),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      onPressed: () {
+                        // TODO: Điều hướng tới màn hình thực đơn chi tiết
+                      },
+                      child: const Text(
+                        "Xem thực đơn",
+                        style: TextStyle(fontSize: 15),
+                      ),
+                    ),
                   ),
                 ],
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios, color: Colors.grey[400]),
-          ],
+              )
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _MenuSectionTitle extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _MenuSectionTitle({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Menu đặc biệt",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onBackground,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Một vài gợi ý cho hôm nay",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onBackground.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+          TextButton(
+            onPressed: () {
+              // TODO: Điều hướng tới màn hình danh sách thực đơn đầy đủ
+            },
+            child: const Text("Xem tất cả"),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _SpecialMenuList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MenuViewModel>(
+      builder: (context, vm, _) {
+        // Sử dụng danh mục (Menu) từ API thay vì danh sách món ăn
+        if (vm.isLoading && vm.danhMucs.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (vm.danhMucs.isEmpty) {
+          return const Center(
+            child: Text(
+              "Hiện tại chưa có menu nào.",
+              style: TextStyle(fontSize: 14),
+            ),
+          );
+        }
+
+        final List<DanhMuc> items =
+            vm.danhMucs.length > 6 ? vm.danhMucs.take(6).toList() : vm.danhMucs;
+
+        // Hiển thị menu đặc biệt theo dạng GridView 2 cột
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 3 / 1.1,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final danhMuc = items[index];
+            return _MenuCard(danhMuc: danhMuc);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _MenuCard extends StatelessWidget {
+  final DanhMuc danhMuc;
+
+  const _MenuCard({required this.danhMuc});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Icon(
+              Icons.restaurant_menu,
+              color: Colors.white,
+              size: 40,
+            ),
+          ),
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  danhMuc.tenDanhMuc,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
