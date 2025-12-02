@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:front_end_app/screens/dat_ban_screen.dart';
-import 'package:provider/provider.dart';
-import '../viewmodels/menu_view_model.dart';
-import '../models/danh_muc.dart';
+import 'package:front_end_app/screens/history_screen.dart';
+import 'package:front_end_app/screens/about_screen.dart';
+import 'package:front_end_app/screens/contact_screen.dart';
+import 'package:front_end_app/screens/menu_screen.dart';
+import '../services/menu_service.dart';
+import '../services/api_constants.dart';
+import '../models/menu.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -71,6 +76,39 @@ class _HomeDrawer extends StatelessWidget {
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Lịch sử đặt bàn'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => HistoryScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Giới thiệu'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AboutScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail_outlined),
+              title: const Text('Liên hệ'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ContactScreen()),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -78,18 +116,51 @@ class _HomeDrawer extends StatelessWidget {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   const _HomeContent();
+
+  @override
+  _HomeContentState createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  final MenuService _menuService = MenuService();
+  List<Menu> _menus = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMenus();
+  }
+
+  Future<void> _loadMenus() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final menus = await _menuService.fetchMenusDangApDung();
+      setState(() {
+        _menus = menus;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
-      onRefresh: () async {
-        await Provider.of<MenuViewModel>(context, listen: false)
-            .fetchInitialData();
-      },
+      onRefresh: _loadMenus,
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -105,7 +176,12 @@ class _HomeContent extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _SpecialMenuList(),
+              child: _SpecialMenuList(
+                menus: _menus,
+                isLoading: _isLoading,
+                error: _error,
+                onRetry: _loadMenus,
+              ),
             ),
           ),
           SliverToBoxAdapter(
@@ -260,7 +336,10 @@ class _MenuSectionTitle extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // TODO: Điều hướng tới màn hình danh sách thực đơn đầy đủ
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => MenuScreen()),
+              );
             },
             child: const Text("Xem tất cả"),
           )
@@ -271,104 +350,270 @@ class _MenuSectionTitle extends StatelessWidget {
 }
 
 class _SpecialMenuList extends StatelessWidget {
+  final List<Menu> menus;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onRetry;
+
+  const _SpecialMenuList({
+    required this.menus,
+    required this.isLoading,
+    this.error,
+    required this.onRetry,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<MenuViewModel>(
-      builder: (context, vm, _) {
-        // Sử dụng danh mục (Menu) từ API thay vì danh sách món ăn
-        if (vm.isLoading && vm.danhMucs.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (isLoading) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-        if (vm.danhMucs.isEmpty) {
-          return const Center(
-            child: Text(
-              "Hiện tại chưa có menu nào.",
-              style: TextStyle(fontSize: 14),
-            ),
-          );
-        }
-
-        final List<DanhMuc> items =
-            vm.danhMucs.length > 6 ? vm.danhMucs.take(6).toList() : vm.danhMucs;
-
-        // Hiển thị menu đặc biệt theo dạng GridView 2 cột
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 3 / 1.1,
+    if (error != null) {
+      return SizedBox(
+        height: 200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 8),
+              Text(
+                "Không thể tải menu",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: onRetry,
+                child: const Text("Thử lại"),
+              ),
+            ],
           ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final danhMuc = items[index];
-            return _MenuCard(danhMuc: danhMuc);
-          },
-        );
+        ),
+      );
+    }
+
+    if (menus.isEmpty) {
+      return const SizedBox(
+        height: 200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.restaurant_menu, size: 48, color: Colors.grey),
+              SizedBox(height: 8),
+              Text(
+                "Hiện tại chưa có menu đặc biệt nào.",
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Hiển thị tối đa 6 menu
+    final List<Menu> displayMenus = menus.length > 6 ? menus.take(6).toList() : menus;
+
+    // Hiển thị menu đặc biệt theo dạng GridView 2 cột
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.7,
+      ),
+      itemCount: displayMenus.length,
+      itemBuilder: (context, index) {
+        final menu = displayMenus[index];
+        return _MenuCard(menu: menu);
       },
     );
   }
 }
 
 class _MenuCard extends StatelessWidget {
-  final DanhMuc danhMuc;
+  final Menu menu;
 
-  const _MenuCard({required this.danhMuc});
+  const _MenuCard({required this.menu});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final imageUrl = menu.hinhAnh != null && menu.hinhAnh!.isNotEmpty
+        ? (menu.hinhAnh!.startsWith('http')
+            ? menu.hinhAnh!
+            : '${ApiConstants.imageBaseUrl}${menu.hinhAnh}')
+        : null;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MenuScreen()),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Icon(
-              Icons.restaurant_menu,
-              color: Colors.white,
-              size: 40,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Hình ảnh menu
+            Expanded(
+              flex: 3,
+              child: imageUrl != null
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: colorScheme.primary.withOpacity(0.1),
+                          child: Icon(
+                            Icons.restaurant_menu,
+                            size: 40,
+                            color: colorScheme.primary,
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: Colors.grey.shade100,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            colorScheme.primary.withOpacity(0.1),
+                            colorScheme.primary.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.restaurant_menu,
+                        size: 40,
+                        color: colorScheme.primary,
+                      ),
+                    ),
             ),
-          ),
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  danhMuc.tenDanhMuc,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+            // Thông tin menu
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        menu.tenMenu,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (menu.giaMenu != null) ...[
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                NumberFormat("#,###").format(menu.giaMenu!.toInt()),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Text(
+                              " đ",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (menu.giaGoc != null &&
+                          menu.giaGoc! > menu.giaMenu!) ...[
+                        const SizedBox(height: 2),
+                        Flexible(
+                          child: Text(
+                            NumberFormat("#,###").format(menu.giaGoc!.toInt()),
+                            style: TextStyle(
+                              fontSize: 11,
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey.shade600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      if (menu.phanTramGiamGia != null &&
+                          menu.phanTramGiamGia! > 0) ...[
+                        const SizedBox(height: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            "Giảm ${menu.phanTramGiamGia!.toStringAsFixed(0)}%",
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
