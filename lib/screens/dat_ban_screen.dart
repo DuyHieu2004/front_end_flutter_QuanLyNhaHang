@@ -27,6 +27,9 @@ class _DatBanScreenState extends State<DatBanScreen> {
   final Set<String> _selectedTableIds = {};
   final List<BanAn> _selectedTablesList = [];
   String _selectedTang = "Tất cả";
+  
+  // Lưu danh sách bàn hiện tại để dùng trong _showMyBookingDetail
+  List<BanAn> _currentTablesList = [];
 
   // Danh sách các tầng (Có thể hardcode hoặc lấy từ API)
   final List<String> _listTang = ["Tất cả", "Tầng trệt", "Tầng 1", "Tầng 2"];
@@ -136,20 +139,55 @@ class _DatBanScreenState extends State<DatBanScreen> {
   Color _getColorForStatus(String? tenTrangThai, bool isSelected) {
     if (isSelected) return Colors.blueAccent; // Đang chọn luôn là màu xanh
 
-    switch (tenTrangThai) {
-      case 'Trong':
-        return Colors.green;        // 🟢 1. Trống
-      case 'CanGhep':
-        return Colors.orange;       // 🟠 2. Cần ghép
-      case 'CuaTui':
-        return Colors.purpleAccent; // 🟣 3. Bàn của mình
-      case 'DaDat':
-        return Colors.red.shade200; // 🔴 4. Người khác đặt
-      case 'BaoTri':
-        return Colors.grey;         // ⚫ 5. Hỏng
-      default:
-        return Colors.grey;
+    if (tenTrangThai == null) return Colors.grey;
+    
+    // Chuẩn hóa trạng thái (giống web khách hàng)
+    final status = tenTrangThai.toLowerCase().trim();
+    
+    // Trạng thái "Đang trống" hoặc "Trống" → màu xanh (có thể đặt)
+    if (status == 'đang trống' || 
+        status == 'trống' || 
+        status == 'trong' ||
+        status == 'available' ||
+        status == 'empty') {
+      return Colors.green;
     }
+    
+    // Trạng thái "Không đủ sức chứa" hoặc "Cần ghép" → màu cam (có thể chọn nhiều bàn)
+    if (status.contains('không đủ') || 
+        status.contains('cần ghép') ||
+        status.contains('sức chứa nhỏ') ||
+        status == 'canghep' ||
+        status == 'suc chua nho') {
+      return Colors.orange;
+    }
+    
+    // Trạng thái "Của tôi" hoặc "Bàn của bạn" → màu tím (xem chi tiết)
+    if (status.contains('của tôi') || 
+        status.contains('của bạn') ||
+        status == 'cuatui' ||
+        status == 'my table') {
+      return Colors.purpleAccent;
+    }
+    
+    // Trạng thái "Đã đặt" → màu đỏ (không chọn được)
+    if (status.contains('đã đặt') || 
+        status.contains('đã được đặt') ||
+        status == 'dadat' ||
+        status == 'booked' ||
+        status == 'occupied') {
+      return Colors.red.shade200;
+    }
+    
+    // Trạng thái "Bảo trì" → màu xám (không chọn được)
+    if (status.contains('bảo trì') || 
+        status == 'baotri' ||
+        status == 'maintenance') {
+      return Colors.grey;
+    }
+    
+    // Mặc định
+    return Colors.grey;
   }
 
   @override
@@ -184,12 +222,44 @@ class _DatBanScreenState extends State<DatBanScreen> {
                 // === LOGIC LỌC TẦNG TẠI ĐÂY ===
                 // 1. Lấy tất cả bàn từ API
                 final allBanAns = snapshot.data!;
+                
+                // Lưu danh sách bàn để dùng trong _showMyBookingDetail
+                _currentTablesList = allBanAns;
 
-                // 2. Lọc theo tầng đang chọn
-                List<BanAn> displayBanAns = allBanAns;
+                // 2. Lọc theo trạng thái (chỉ hiển thị 2 trạng thái như web khách hàng)
+                // API GetStatusByTime đã tự động kiểm tra hóa đơn trong thời gian được chọn
+                // - Nếu bàn có hóa đơn trong thời gian đó → trạng thái "Đã đặt" → không hiển thị
+                // - Nếu bàn không có hóa đơn → trạng thái "Đang trống" hoặc "Không đủ sức chứa" → hiển thị
+                List<BanAn> filteredByStatus = allBanAns.where((b) {
+                  final status = (b.tenTrangThai ?? '').toLowerCase().trim();
+                  
+                  // Loại bỏ các bàn đã được đặt (giống web khách hàng)
+                  if (status.contains('đã đặt') || 
+                      status.contains('đã được đặt') ||
+                      status == 'dadat' ||
+                      status == 'booked' ||
+                      status == 'occupied') {
+                    return false; // Không hiển thị bàn đã đặt
+                  }
+                  
+                  // Chỉ hiển thị: "Đang trống" và "Không đủ sức chứa" (có thể chọn)
+                  return status == 'đang trống' || 
+                         status == 'trống' || 
+                         status == 'trong' ||
+                         status == 'available' ||
+                         status == 'empty' ||
+                         status.contains('không đủ') ||
+                         status.contains('cần ghép') ||
+                         status.contains('sức chứa nhỏ') ||
+                         status == 'canghep' ||
+                         status == 'suc chua nho';
+                }).toList();
+
+                // 3. Lọc theo tầng đang chọn
+                List<BanAn> displayBanAns = filteredByStatus;
                 if (_selectedTang != "Tất cả") {
                   // So sánh tên tầng (API trả về trong trường tenTang)
-                  displayBanAns = allBanAns.where((b) => b.tenTang == _selectedTang).toList();
+                  displayBanAns = filteredByStatus.where((b) => b.tenTang == _selectedTang).toList();
                 }
 
                 if (displayBanAns.isEmpty) {
@@ -204,10 +274,68 @@ class _DatBanScreenState extends State<DatBanScreen> {
                   );
                 }
 
+                // Tính tổng sức chứa đã chọn
+                final totalSelectedCapacity = _selectedTablesList.fold(
+                  0, 
+                  (sum, table) => sum + (table.sucChua ?? 0)
+                );
+                final remainingGuests = _selectedSoNguoi > 0 
+                    ? (_selectedSoNguoi - totalSelectedCapacity).clamp(0, double.infinity).toInt()
+                    : 0;
+                final hasEnoughCapacity = _selectedTableIds.isNotEmpty && totalSelectedCapacity >= _selectedSoNguoi;
+
                 // 3. Hiển thị Grid
                 return RefreshIndicator(
                   onRefresh: () async => _loadFilteredTables(),
-                  child: GridView.builder(
+                  child: Column(
+                    children: [
+                      // Hiển thị thông tin tổng sức chứa đã chọn
+                      if (_selectedTableIds.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: hasEnoughCapacity 
+                                ? Colors.green.shade50 
+                                : Colors.orange.shade50,
+                            border: Border.all(
+                              color: hasEnoughCapacity 
+                                  ? Colors.green 
+                                  : Colors.orange,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tổng sức chứa đã chọn: $totalSelectedCapacity / $_selectedSoNguoi khách',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (_selectedTableIds.isEmpty)
+                                const Text(
+                                  'Vui lòng chọn ít nhất một bàn để gửi yêu cầu đặt chỗ.',
+                                  style: TextStyle(color: Colors.orange),
+                                )
+                              else if (remainingGuests > 0)
+                                Text(
+                                  'Còn thiếu $remainingGuests chỗ. Vui lòng chọn thêm bàn hoặc giảm số khách.',
+                                  style: const TextStyle(color: Colors.orange),
+                                )
+                              else
+                                const Text(
+                                  'Đã đủ chỗ cho khách. Bạn vẫn có thể ghi chú thêm yêu cầu đặc biệt.',
+                                  style: TextStyle(color: Colors.green),
+                                ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: GridView.builder(
                     padding: const EdgeInsets.all(12.0),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
@@ -220,6 +348,9 @@ class _DatBanScreenState extends State<DatBanScreen> {
                       final banAn = displayBanAns[index];
                       return _buildTableCard(context, banAn);
                     },
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -228,53 +359,104 @@ class _DatBanScreenState extends State<DatBanScreen> {
           _buildLegend(),
         ],
       ),
-      // Nút đặt bàn nổi
+      // Nút đặt bàn nổi với validation
       floatingActionButton: _selectedTableIds.isNotEmpty
-          ? FloatingActionButton.extended(
-        label: const Text("Đặt bàn"),
-        icon: const Icon(Icons.check),
-        backgroundColor: Colors.deepPurple,
-        onPressed: () async {
-          // 1. Kiểm tra: Nếu chưa chọn bàn nào thì báo lỗi
-          if (_selectedTablesList.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Vui lòng chọn ít nhất một bàn để tiếp tục!"),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 2),
-              ),
-            );
-            return;
-          }
+          ? Builder(
+              builder: (context) {
+                final totalCapacity = _selectedTablesList.fold(
+                  0, 
+                  (sum, table) => sum + (table.sucChua ?? 0)
+                );
+                final remainingGuests = _selectedSoNguoi > 0 
+                    ? (_selectedSoNguoi - totalCapacity).clamp(0, double.infinity).toInt()
+                    : 0;
+                final hasEnoughCapacity = totalCapacity >= _selectedSoNguoi;
+                
+                return FloatingActionButton.extended(
+                  label: Text(hasEnoughCapacity ? "Đặt bàn" : "Thiếu $remainingGuests chỗ"),
+                  icon: const Icon(Icons.check),
+                  backgroundColor: hasEnoughCapacity ? Colors.deepPurple : Colors.orange,
+                  onPressed: () async {
+                              // 1. Kiểm tra: Nếu chưa chọn bàn nào thì báo lỗi
+                              if (_selectedTablesList.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Vui lòng chọn ít nhất một bàn để tiếp tục!"),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              // 2. Kiểm tra đủ sức chứa
+                              final totalCapacity = _selectedTablesList.fold(
+                                0, 
+                                (sum, table) => sum + (table.sucChua ?? 0)
+                              );
+                              final remainingGuests = _selectedSoNguoi > 0 
+                                  ? (_selectedSoNguoi - totalCapacity).clamp(0, double.infinity).toInt()
+                                  : 0;
+                              
+                              if (remainingGuests > 0) {
+                                final shouldContinue = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text("Chưa đủ chỗ"),
+                                    content: Text(
+                                      "Bạn đi $_selectedSoNguoi người nhưng các bàn đã chọn chỉ chứa được $totalCapacity người.\n\n"
+                                      "Còn thiếu $remainingGuests chỗ. Bạn có muốn tiếp tục đặt bàn không?",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, false),
+                                        child: const Text("Chọn thêm bàn"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        child: const Text("Vẫn đặt", style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (shouldContinue != true) {
+                                  return;
+                                }
+                              }
 
-          // 2. Chuyển sang màn hình Form và CHỜ kết quả trả về (dùng await)
-          final bool? ketQuaDatBan = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DatBanFormScreen(
-                // Truyền danh sách bàn sang form
-                danhSachBan: List.from(_selectedTablesList),
-              ),
-            ),
-          );
+                              // 3. Chuyển sang màn hình Form và CHỜ kết quả trả về (dùng await)
+                              final bool? ketQuaDatBan = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DatBanFormScreen(
+                                    // Truyền danh sách bàn, số lượng người và thời gian sang form
+                                    danhSachBan: List.from(_selectedTablesList),
+                                    soNguoi: _selectedSoNguoi,
+                                    thoiGian: _selectedDateTime,
+                                  ),
+                                ),
+                              );
 
-          // 3. Kiểm tra kết quả: Nếu đặt thành công (trả về true) thì tải lại dữ liệu
-          if (ketQuaDatBan == true) {
-            print("--- Đã đặt bàn xong, đang tải lại danh sách bàn ---");
+                              // 4. Kiểm tra kết quả: Nếu đặt thành công (trả về true) thì tải lại dữ liệu
+                              if (ketQuaDatBan == true) {
+                                print("--- Đã đặt bàn xong, đang tải lại danh sách bàn ---");
 
-            // Gọi hàm này để API chạy lại -> Cập nhật màu bàn từ "Trống" sang "Của bạn"
-            _loadFilteredTables();
+                                // Gọi hàm này để API chạy lại -> Cập nhật màu bàn từ "Trống" sang "Của bạn"
+                                _loadFilteredTables();
 
-            // Hiện thông báo nhỏ bên dưới
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Cập nhật trạng thái bàn thành công!"),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-      )
+                                // Hiện thông báo nhỏ bên dưới
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Cập nhật trạng thái bàn thành công!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            },
+                  );
+                },
+              )
           : null,
     );
   }
@@ -418,36 +600,64 @@ class _DatBanScreenState extends State<DatBanScreen> {
 
     return GestureDetector(
       onTap: () {
-        switch (status) {
-        // NHÓM 1: CHO PHÉP CHỌN (Trống & Cần ghép)
-          case 'Trong':
-          case 'CanGhep':
-            setState(() {
-              if (isSelected) {
-                _selectedTableIds.remove(banAn.maBan);
-                _selectedTablesList.removeWhere((b) => b.maBan == banAn.maBan);
-              } else {
-                _selectedTableIds.add(banAn.maBan!);
-                _selectedTablesList.add(banAn);
-              }
-            });
-            break;
-
-        // NHÓM 2: XEM CHI TIẾT (Bàn của tui)
-          case 'CuaTui':
-            _showMyBookingDetail(banAn.maBan!);
-            break;
-
-        // NHÓM 3: CHẶN (Đã đặt / Bảo trì)
-          case 'DaDat':
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Bàn này đã được người khác đặt!'), duration: Duration(milliseconds: 800)));
-            break;
-          case 'BaoTri':
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Bàn đang bảo trì.'), duration: Duration(milliseconds: 800)));
-            break;
+        // Chuẩn hóa trạng thái (giống web khách hàng)
+        final normalizedStatus = status?.toLowerCase().trim() ?? '';
+        
+        // NHÓM 1: CHO PHÉP CHỌN (Đang trống & Không đủ sức chứa)
+        if (normalizedStatus == 'đang trống' || 
+            normalizedStatus == 'trống' || 
+            normalizedStatus == 'trong' ||
+            normalizedStatus == 'available' ||
+            normalizedStatus == 'empty' ||
+            normalizedStatus.contains('không đủ') ||
+            normalizedStatus.contains('cần ghép') ||
+            normalizedStatus.contains('sức chứa nhỏ') ||
+            normalizedStatus == 'canghep' ||
+            normalizedStatus == 'suc chua nho') {
+          setState(() {
+            if (isSelected) {
+              _selectedTableIds.remove(banAn.maBan);
+              _selectedTablesList.removeWhere((b) => b.maBan == banAn.maBan);
+            } else {
+              _selectedTableIds.add(banAn.maBan);
+              _selectedTablesList.add(banAn);
+            }
+          });
+          return;
         }
+
+        // NHÓM 2: XEM CHI TIẾT (Bàn của tôi)
+        if (normalizedStatus.contains('của tôi') || 
+            normalizedStatus.contains('của bạn') ||
+            normalizedStatus == 'cuatui' ||
+            normalizedStatus == 'my table') {
+          _showMyBookingDetail(banAn.maBan);
+          return;
+        }
+
+        // NHÓM 3: CHẶN (Đã đặt)
+        if (normalizedStatus.contains('đã đặt') || 
+            normalizedStatus.contains('đã được đặt') ||
+            normalizedStatus == 'dadat' ||
+            normalizedStatus == 'booked' ||
+            normalizedStatus == 'occupied') {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Bàn này đã được người khác đặt!'), 
+              duration: Duration(milliseconds: 800)));
+          return;
+        }
+        
+        // NHÓM 4: CHẶN (Bảo trì)
+        if (normalizedStatus.contains('bảo trì') || 
+            normalizedStatus == 'baotri' ||
+            normalizedStatus == 'maintenance') {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Bàn đang bảo trì.'), 
+              duration: Duration(milliseconds: 800)));
+          return;
+        }
+        
+        // Mặc định: không làm gì
       },
       child: Container(
         decoration: BoxDecoration(
@@ -464,10 +674,23 @@ class _DatBanScreenState extends State<DatBanScreen> {
             Text('${banAn.sucChua} ghế', style: const TextStyle(fontSize: 12)),
 
             // Hiển thị nhãn phụ
-            if (status == 'CuaTui')
-              const Text('(Của bạn)', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
-            if (status == 'CanGhep')
-              const Text('(Ghép bàn)', style: TextStyle(fontSize: 10, color: Colors.orange)),
+            Builder(
+              builder: (context) {
+                if (status == null) return const SizedBox.shrink();
+                final normalizedStatus = status.toLowerCase();
+                if (normalizedStatus.contains('của tôi') || 
+                    normalizedStatus.contains('của bạn') ||
+                    normalizedStatus == 'cuatui') {
+                  return const Text('(Của bạn)', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold));
+                } else if (normalizedStatus.contains('không đủ') || 
+                           normalizedStatus.contains('cần ghép') ||
+                           normalizedStatus.contains('sức chứa nhỏ') ||
+                           normalizedStatus == 'canghep') {
+                  return const Text('(Ghép bàn)', style: TextStyle(fontSize: 10, color: Colors.orange));
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ],
         ),
       ),
@@ -482,38 +705,210 @@ class _DatBanScreenState extends State<DatBanScreen> {
     );
 
     try {
-      final detail = await _banAnService.getMyBookingDetail(maBan, _selectedDateTime);      Navigator.pop(context); // Tắt loading
+      // Tìm bàn trong danh sách hiện tại để lấy maDonHang nếu có
+      final foundBan = _currentTablesList.firstWhere(
+        (b) => b.maBan == maBan,
+        orElse: () => _currentTablesList.isNotEmpty ? _currentTablesList.first : BanAn(
+          maBan: maBan,
+          tenBan: '',
+          sucChua: 0,
+        ),
+      );
+      
+      // Lấy chi tiết đơn hàng/hóa đơn
+      final detail = await _banAnService.getMyBookingDetail(
+        maDonHang: foundBan.maDonHang,
+        maBan: maBan,
+        selectedTime: _selectedDateTime,
+      );
+      
+      Navigator.pop(context); // Tắt loading
 
-      // Parse dữ liệu sơ bộ từ JSON (Hoặc dùng Model nếu bạn đã tạo)
-      final List<dynamic> monAns = detail['monAns'] ?? [];
-      final String trangThai = detail['trangThai'] ?? '';
-      final int soNguoi = detail['soNguoi'] ?? 0;
+      // Parse dữ liệu từ JSON (giống format web)
+      final String maDonHang = detail['maDonHang'] ?? detail['MaDonHang'] ?? '';
+      final String trangThai = detail['trangThai'] ?? detail['TrangThai'] ?? detail['tenTrangThai'] ?? '';
+      final String tenTrangThai = detail['tenTrangThai'] ?? detail['TenTrangThai'] ?? trangThai;
+      final int soNguoi = detail['soNguoi'] ?? detail['SoNguoi'] ?? 0;
+      final double tongTien = (detail['tongTien'] ?? detail['TongTien'] ?? 0).toDouble();
+      final String? thoiGianDatHang = detail['thoiGianDatHang'] ?? detail['ThoiGianDatHang'];
+      final List<dynamic> monAns = detail['monAns'] ?? detail['MonAns'] ?? detail['chiTietDonHang'] ?? detail['ChiTietDonHang'] ?? [];
+      final List<dynamic> danhSachBan = detail['danhSachBan'] ?? detail['DanhSachBan'] ?? detail['listMaBan'] ?? detail['ListMaBan'] ?? [];
 
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Chi tiết đặt bàn'),
+          title: Row(
+            children: [
+              const Icon(Icons.receipt_long, color: Colors.deepPurple),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('Chi tiết đơn hàng')),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Trạng thái: $trangThai', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                // Mã đơn hàng
+                if (maDonHang.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('Mã đơn: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(maDonHang, style: TextStyle(color: Colors.deepPurple.shade700, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                
+                // Trạng thái
+                Row(
+                  children: [
+                    const Text('Trạng thái: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(trangThai).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getStatusColor(trangThai)),
+                      ),
+                      child: Text(
+                        tenTrangThai,
+                        style: TextStyle(
+                          color: _getStatusColor(trangThai),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
+                
+                // Thông tin cơ bản
+                if (thoiGianDatHang != null) ...[
+                  Text('Thời gian đặt: ${_formatDateTime(thoiGianDatHang)}'),
+                  const SizedBox(height: 4),
+                ],
                 Text('Số người: $soNguoi'),
-                const Divider(),
-                const Text('Món ăn:', style: TextStyle(fontWeight: FontWeight.bold)),
-                ...monAns.map((m) => Text('- ${m['tenMon']} (x${m['soLuong']})')),
+                if (danhSachBan.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('Bàn: ${danhSachBan.join(", ")}'),
+                ],
+                
+                const Divider(height: 24),
+                
+                // Danh sách món ăn
+                const Text('Món ăn:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                if (monAns.isEmpty)
+                  const Text('Chưa có món nào', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                else
+                  ...monAns.map((m) {
+                    final tenMon = m['tenMon'] ?? m['TenMon'] ?? m['tenMonAn'] ?? m['TenMonAn'] ?? 'N/A';
+                    final soLuong = m['soLuong'] ?? m['SoLuong'] ?? 0;
+                    final donGia = (m['donGia'] ?? m['DonGia'] ?? 0).toDouble();
+                    final thanhTien = soLuong * donGia;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(tenMon, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                Text('x$soLuong', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${_formatCurrency(thanhTien)} đ',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                
+                // Tổng tiền
+                if (tongTien > 0) ...[
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Tổng tiền:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        '${_formatCurrency(tongTien)} đ',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Đóng'),
+            ),
+          ],
         ),
       );
     } catch (e) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
+  }
+
+  Color _getStatusColor(String trangThai) {
+    final status = trangThai.toUpperCase();
+    if (status.contains('CHO_XAC_NHAN') || status.contains('CHỜ XÁC NHẬN')) {
+      return Colors.orange;
+    } else if (status.contains('DA_XAC_NHAN') || status.contains('ĐÃ XÁC NHẬN')) {
+      return Colors.blue;
+    } else if (status.contains('CHO_THANH_TOAN') || status.contains('CHỜ THANH TOÁN')) {
+      return Colors.purple;
+    } else if (status.contains('DA_HOAN_THANH') || status.contains('ĐÃ HOÀN THÀNH')) {
+      return Colors.green;
+    } else if (status.contains('DA_HUY') || status.contains('ĐÃ HỦY')) {
+      return Colors.red;
+    }
+    return Colors.grey;
+  }
+
+  String _formatDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null) return '';
+    try {
+      final dateTime = DateTime.parse(dateTimeStr);
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateTimeStr;
+    }
+  }
+
+  String _formatCurrency(double amount) {
+    return amount.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
   }
 
 
@@ -555,8 +950,10 @@ class _DatBanScreenState extends State<DatBanScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => DatBanFormScreen(
-          // SỬA CHỖ NÀY: Truyền list bàn đã chọn qua
+          // Truyền danh sách bàn, số lượng người và thời gian
           danhSachBan: _selectedTablesList,
+          soNguoi: _selectedSoNguoi,
+          thoiGian: _selectedDateTime,
         ),
       ),
     ).then((result) {
@@ -587,15 +984,15 @@ class _DatBanScreenState extends State<DatBanScreen> {
           topRight: Radius.circular(16.0),
         ),
       ),
-        child: Wrap(
-            spacing: 8.0,
-            children: [
-              _buildLegendItem(Colors.green, 'Trống'),
-              _buildLegendItem(Colors.orange, 'Ghép'),
-              _buildLegendItem(Colors.purpleAccent, 'Của bạn'),
-              _buildLegendItem(Colors.red.shade200, 'Đã đặt'),
-            ]
-        )
+      child: Wrap(
+        spacing: 8.0,
+        children: [
+          _buildLegendItem(Colors.green, 'Trống'),
+          _buildLegendItem(Colors.orange, 'Ghép'),
+          _buildLegendItem(Colors.purpleAccent, 'Của bạn'),
+          _buildLegendItem(Colors.red.shade200, 'Đã đặt'),
+        ],
+      ),
     );
   }
 

@@ -169,13 +169,34 @@ class AuthService {
   Future<bool> cancelBooking(String maDonHang) async {
     final headers = await _getAuthHeaders();
     final response = await http.post(
-      Uri.parse('$_baseUrl/BookingHistory/cancel/$maDonHang'),
+      Uri.parse('$_baseUrl/BookingHistory/cancel'),
       headers: headers,
+      body: json.encode({'maDonHang': maDonHang}),
     );
     if (response.statusCode == 200) {
       return true;
     } else {
       throw Exception('Lỗi khi hủy bàn: ${json.decode(response.body)['message']}');
+    }
+  }
+
+  // Tra cứu lịch sử đặt bàn bằng số điện thoại (không cần đăng nhập)
+  Future<Map<String, dynamic>> getHistoryByPhone(String phone) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/BookingHistory/by-phone/${Uri.encodeComponent(phone)}'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+      );
+      
+      if (response.statusCode == 200) {
+        return json.decode(utf8.decode(response.bodyBytes));
+      } else {
+        throw Exception('Lỗi khi tra cứu: ${response.body}');
+      }
+    } on SocketException catch (_) {
+      throw Exception('Không thể kết nối đến máy chủ.');
+    } catch (e) {
+      rethrow;
     }
   }
 

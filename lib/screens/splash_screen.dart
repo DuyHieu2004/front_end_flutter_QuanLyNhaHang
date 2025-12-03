@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:front_end_app/utils/QuickAlert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:front_end_app/services/auth_service.dart';
 import 'package:front_end_app/screens/home_screen.dart';
-import 'package:front_end_app/screens/login_screen.dart';
 import 'package:front_end_app/screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -12,8 +9,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final AuthService _authService = AuthService();
-
   @override
   void initState() {
     super.initState();
@@ -34,25 +29,17 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (!hasSeenOnboarding) {
+      // Lần đầu mở app -> đi qua Onboarding (PageView giới thiệu)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => OnboardingScreen()),
       );
     } else {
-      String? token = await _authService.getToken();
-      if (!mounted) return;
-
-      if (token != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-        );
-      }
+      // ĐÃ xem Onboarding -> bỏ qua Login, vào thẳng Home
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
     }
   }
 

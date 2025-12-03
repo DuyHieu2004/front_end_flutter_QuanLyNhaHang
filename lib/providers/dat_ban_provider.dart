@@ -16,6 +16,12 @@ class DatBanProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   DateTime get selectedDateTime => _selectedDateTime;
 
+  // Method để set thời gian từ bên ngoài (từ màn hình chọn bàn)
+  void setDateTime(DateTime dateTime) {
+    _selectedDateTime = dateTime;
+    notifyListeners();
+  }
+
 
   // Hàm chọn ngày giờ
   Future<void> pickDateTime(BuildContext context) async {
