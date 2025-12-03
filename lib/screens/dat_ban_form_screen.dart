@@ -219,23 +219,43 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
         tienCocToSend = _depositAmount;
       }
 
-      String? maNhanVienHienTai = "NV002";
+      String? maNhanVienHienTai = "NV000";
+
+      // Tạo danh sách ID bàn (giống web: tableIds)
+      final List<String> tableIds = widget.danhSachBan
+          .map((ban) => ban.maBan ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      // Xử lý ghi chú: nếu có nhiều bàn thì thêm thông tin gộp bàn
+      String? finalGhiChu;
+      if (widget.danhSachBan.length > 1) {
+        finalGhiChu = "Gộp bàn: $_tenCacBan. ${_ghiChuController.text}".trim();
+        if (finalGhiChu.endsWith('.')) {
+          finalGhiChu = finalGhiChu.substring(0, finalGhiChu.length - 1);
+        }
+      } else {
+        finalGhiChu = _ghiChuController.text.isEmpty ? null : _ghiChuController.text;
+      }
 
       final dto = DatBanDto(
-        maBan: widget.danhSachBan.first.maBan,
-        hoTenKhach: _tenKhachController.text,
-        soDienThoaiKhach: _sdtController.text,
+        // Gửi danh sách bàn (giống web)
+        tableIds: tableIds.isNotEmpty ? tableIds : null,
+        // Fallback: nếu không có bàn nào thì để null (nhà hàng sẽ sắp xếp)
+        maBan: tableIds.isEmpty ? null : (tableIds.length == 1 ? tableIds.first : null),
+        
+        hoTenKhach: _tenKhachController.text.trim(),
+        soDienThoaiKhach: _sdtController.text.trim(),
         thoiGianDatHang: provider.selectedDateTime,
         soLuongNguoi: widget.soNguoi,
-        ghiChu: widget.danhSachBan.length > 1
-            ? "Gộp bàn: $_tenCacBan. ${_ghiChuController.text}"
-            : (_ghiChuController.text.isEmpty ? null : _ghiChuController.text),
+        ghiChu: finalGhiChu,
         maNhanVien: maNhanVienHienTai,
 
-        // 4. ĐIỀN DỮ LIỆU CHUẨN VÀO DTO
-        maKhachHang: _foundCustomerId != null ? _foundCustomerId : currentUserId, // Ưu tiên ID từ tra cứu
+        // Điền dữ liệu chuẩn vào DTO (giống web)
+        maKhachHang: _foundCustomerId ?? currentUserId, // Ưu tiên ID từ tra cứu
         email: emailToSend,         // Email chỉ gửi nếu muốn nhận notification
-        tienDatCoc: tienCocToSend,  // Tiền cọc đã tính
+        tienDatCoc: tienCocToSend > 0 ? tienCocToSend : null,  // Chỉ gửi nếu > 0
+        source: 'App', // Nguồn đặt bàn từ Flutter app
       );
 
       print("DTO chuẩn bị gửi: ${dto.toJson()}");
