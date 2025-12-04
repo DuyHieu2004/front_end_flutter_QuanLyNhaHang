@@ -25,21 +25,25 @@ class Menu {
     this.chiTietMenus,
   });
 
+  // Helper method để parse giá từ JSON
+  static double? _parsePrice(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      return parsed;
+    }
+    return null;
+  }
+
   factory Menu.fromJson(Map<String, dynamic> json) {
     return Menu(
       maMenu: json['maMenu'] ?? json['MaMenu'] ?? '',
       tenMenu: json['tenMenu'] ?? json['TenMenu'] ?? '',
       loaiMenu: json['loaiMenu'] ?? json['LoaiMenu'],
-      giaMenu: json['giaMenu'] != null 
-          ? (json['giaMenu'] is int ? json['giaMenu'].toDouble() : json['giaMenu'])
-          : (json['GiaMenu'] != null 
-              ? (json['GiaMenu'] is int ? json['GiaMenu'].toDouble() : json['GiaMenu'])
-              : null),
-      giaGoc: json['giaGoc'] != null
-          ? (json['giaGoc'] is int ? json['giaGoc'].toDouble() : json['giaGoc'])
-          : (json['GiaGoc'] != null
-              ? (json['GiaGoc'] is int ? json['GiaGoc'].toDouble() : json['GiaGoc'])
-              : null),
+      giaMenu: _parsePrice(json['giaMenu'] ?? json['GiaMenu']),
+      giaGoc: _parsePrice(json['giaGoc'] ?? json['GiaGoc']),
       phanTramGiamGia: json['phanTramGiamGia'] != null
           ? (json['phanTramGiamGia'] is int ? json['phanTramGiamGia'].toDouble() : json['phanTramGiamGia'])
           : (json['PhanTramGiamGia'] != null

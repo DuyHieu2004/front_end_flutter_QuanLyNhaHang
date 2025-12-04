@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 import 'dart:async'; // <--- 1. IMPORT DART:ASYNC ĐỂ DÙNG TIMER
@@ -175,29 +176,62 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // 1. LOGO
-                  SizedBox(height: 80),
-                  Image.asset(
-                    'assets/images/logo.jpg',
-                    height: 100,
-                  ),
-                  SizedBox(height: 20),
+                  SizedBox(height: 60),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                    ),
+                    child: Image.asset(
+                      'assets/images/logo.jpg',
+                      height: 90,
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(duration: 600.ms)
+                      .scale(begin: const Offset(0.8, 0.8)),
+                  SizedBox(height: 24),
                   Text(
                     _buildTitle(authProvider.currentStep),
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                      letterSpacing: 0.5,
                     ),
-                  ),
+                  )
+                      .animate()
+                      .fadeIn(delay: 200.ms, duration: 600.ms)
+                      .slideY(begin: -0.2, end: 0),
+                  SizedBox(height: 8),
+                  Text(
+                    _buildSubtitle(authProvider.currentStep),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    textAlign: TextAlign.center,
+                  )
+                      .animate()
+                      .fadeIn(delay: 400.ms, duration: 600.ms),
                   SizedBox(height: 40),
 
                   // 2. KHỐI FORM
                   Container(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.all(28.0),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20.0),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(24.0),
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -210,34 +244,52 @@ class _LoginScreenState extends State<LoginScreen> {
                           _buildRegisterStep(),
                       ],
                     ),
-                  ),
+                  )
+                      .animate()
+                      .fadeIn(delay: 300.ms, duration: 600.ms)
+                      .slideY(begin: 0.2, end: 0),
 
                   SizedBox(height: 30),
 
                   // 3. NÚT SUBMIT
-                  if (authProvider.isLoading)
-                    CircularProgressIndicator()
-                  else
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue, // Màu nút
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                          ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: authProvider.isLoading ? Colors.grey : Colors.blue.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.0),
                         ),
-                        onPressed: () => _onSubmit(context),
-                        child: Text(
-                          _buildButtonText(authProvider.currentStep),
-                          style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold),
+                        elevation: 4,
+                      ),
+                      onPressed: authProvider.isLoading ? null : () => _onSubmit(context),
+                      icon: authProvider.isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(_getButtonIcon(authProvider.currentStep), size: 22),
+                      label: Text(
+                        authProvider.isLoading
+                            ? 'Đang xử lý...'
+                            : _buildButtonText(authProvider.currentStep),
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
+                  )
+                      .animate()
+                      .fadeIn(delay: 500.ms, duration: 600.ms)
+                      .scale(begin: const Offset(0.9, 0.9)),
 
                   // 4. THÔNG BÁO LỖI
                   if (authProvider.errorMessage.isNotEmpty)
@@ -340,23 +392,36 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
 
             // Nút Gửi lại mã
-            TextButton(
+            ElevatedButton.icon(
               // Khi timer đang chạy (isTimerRunning = true), onPressed sẽ là null
               // -> Nút tự động bị vô hiệu hóa (mờ đi)
               onPressed: isTimerRunning ? null : () => _resendOtp(context),
-              style: TextButton.styleFrom(
-                // Màu chữ khi bị vô hiệu hóa
-                disabledForegroundColor: Colors.white.withOpacity(0.4),
+              icon: Icon(
+                Icons.refresh,
+                size: 18,
+                color: isTimerRunning ? Colors.white.withOpacity(0.4) : Colors.white,
               ),
-              child: Text(
+              label: Text(
                 "Gửi lại mã",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
+                  fontSize: 13,
                   // Khi được phép nhấn, màu sẽ sáng hơn
                   color: isTimerRunning
                       ? Colors.white.withOpacity(0.4)
                       : Colors.white,
                 ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isTimerRunning
+                    ? Colors.grey.shade600
+                    : Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: isTimerRunning ? 0 : 2,
               ),
             ),
           ],
@@ -390,21 +455,28 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: TextStyle(color: Colors.white), // Chữ người dùng gõ
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+      ), // Chữ người dùng gõ
       decoration: InputDecoration(
         labelText: labelText,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)), // Chữ gợi ý
-        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.8)), // Icon
+        labelStyle: TextStyle(
+          color: Colors.white.withOpacity(0.9),
+          fontSize: 15,
+        ), // Chữ gợi ý
+        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.9), size: 22), // Icon
         filled: true,
-        fillColor: Colors.white.withOpacity(0.2), // Nền
+        fillColor: Colors.white.withOpacity(0.15), // Nền
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.0),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)), // Viền
+          borderRadius: BorderRadius.circular(16.0),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.4), width: 1.5), // Viền
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.0),
-          borderSide: BorderSide(color: Colors.white, width: 2.0), // Viền khi focus
+          borderRadius: BorderRadius.circular(16.0),
+          borderSide: const BorderSide(color: Colors.white, width: 2.5), // Viền khi focus
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       ),
     );
   }
@@ -418,6 +490,28 @@ class _LoginScreenState extends State<LoginScreen> {
         return "Đăng nhập";
       case AuthStep.EnterOtpRegister:
         return "Đăng ký";
+    }
+  }
+
+  String _buildSubtitle(AuthStep currentStep) {
+    switch (currentStep) {
+      case AuthStep.Initial:
+        return "Đăng nhập để trải nghiệm dịch vụ tốt nhất";
+      case AuthStep.EnterOtpLogin:
+        return "Nhập mã OTP để tiếp tục";
+      case AuthStep.EnterOtpRegister:
+        return "Hoàn tất thông tin để tạo tài khoản";
+    }
+  }
+
+  IconData _getButtonIcon(AuthStep currentStep) {
+    switch (currentStep) {
+      case AuthStep.Initial:
+        return Icons.arrow_forward;
+      case AuthStep.EnterOtpLogin:
+        return Icons.login;
+      case AuthStep.EnterOtpRegister:
+        return Icons.person_add;
     }
   }
 

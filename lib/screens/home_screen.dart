@@ -17,9 +17,16 @@ class HomeScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Trang chủ"),
+        title: const Text(
+          "Trang chủ",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.15,
+          ),
+        ),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+        elevation: 0,
       ),
       drawer: const _HomeDrawer(),
       body: const _HomeContent(),
@@ -34,88 +41,182 @@ class _HomeDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            const DrawerHeader(
+            Container(
+              height: 200,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
+                  colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              child: Align(
-                alignment: Alignment.bottomLeft,
-                child: Text(
-                  "Nhà hàng Việt",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -20,
+                    top: -20,
+                    child: Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    bottom: 20,
+                    left: 20,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.restaurant_menu,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Nhà hàng Việt",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Ẩm thực truyền thống",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.home_outlined),
-              title: const Text('Trang chủ'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Đặt bàn'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => DatBanScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.restaurant_menu_outlined),
-              title: const Text('Thực đơn'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MenuScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Lịch sử đặt bàn'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => HistoryScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Giới thiệu'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => AboutScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.contact_mail_outlined),
-              title: const Text('Liên hệ'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ContactScreen()),
-                );
-              },
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.home_outlined,
+                    title: 'Trang chủ',
+                    onTap: () => Navigator.pop(context),
+                    isSelected: true,
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.calendar_today_outlined,
+                    title: 'Đặt bàn',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => DatBanScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.restaurant_menu_outlined,
+                    title: 'Thực đơn',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => MenuScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.history,
+                    title: 'Lịch sử đặt bàn',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => HistoryScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 32),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.info_outline,
+                    title: 'Giới thiệu',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AboutScreen()),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context,
+                    icon: Icons.contact_mail_outlined,
+                    title: 'Liên hệ',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ContactScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.deepPurple.shade50 : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isSelected ? Colors.deepPurple.shade700 : Colors.grey.shade700,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? Colors.deepPurple.shade900 : Colors.grey.shade800,
+          ),
+        ),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
@@ -209,98 +310,156 @@ class _HeroSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Container(
-        height: 220,
+        height: 240,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          image: const DecorationImage(
-            image: AssetImage('assets/images/splash2.jpg'),
-            fit: BoxFit.cover,
-          ),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [
-                Colors.black.withOpacity(0.55),
-                Colors.black.withOpacity(0.35),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        child: Stack(
+          children: [
+            // Background image với fallback
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.network(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuAg9QSgrxyT28Ng0YKudOW7aGTwdpENZtEv9esqaGnbSCGQIt7Cc8Zw_qbtKsq2Sfzs9iqol6yE12VajK07FgRRyMUd12SKRC3vEv12P_jv3-YOis9c4FAlLamdhJUARgsq9vCkk4GX-ijZ1pWcnvkj0xnrLQ6K_fPtXq_PSIFr80e1hKRzIbbkJBgneE9P4d4sVntNc8-ZCR1ngeRB3e8M5hK94TvJkc5RNC4JpJ0A4ERxCUxVALaoDDd1GkdQXmKUZ2fsvK1c1ukd',
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 240,
+                errorBuilder: (context, error, stackTrace) {
+                  return Image.asset(
+                    'assets/images/splash2.jpg',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: 240,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.deepPurple.shade700,
+                              Colors.deepPurple.shade400,
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
+            // Gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.45),
+                    Colors.black.withOpacity(0.65),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                "Trải Nghiệm Tinh Hoa\nẨm Thực Việt",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  height: 1.3,
-                ),
-              )
-                  .animate()
-                  .fadeIn(duration: 600.ms)
-                  .slideX(begin: -0.2, end: 0),
-              const SizedBox(height: 8),
-              const Text(
-                "Khám phá hương vị truyền thống\ntrong không gian sang trọng, ấm cúng.",
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-              )
-                  .animate()
-                  .fadeIn(delay: 200.ms, duration: 600.ms)
-                  .slideX(begin: -0.2, end: 0),
+              Flexible(
+                child: Text(
+                  "Trải Nghiệm Tinh Hoa\nẨm Thực Việt",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                )
+                    .animate()
+                    .fadeIn(duration: 600.ms)
+                    .slideX(begin: -0.2, end: 0),
+              ),
+              const SizedBox(height: 6),
+              Flexible(
+                child: Text(
+                  "Khám phá hương vị truyền thống\ntrong không gian sang trọng, ấm cúng.",
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                )
+                    .animate()
+                    .fadeIn(delay: 200.ms, duration: 600.ms)
+                    .slideX(begin: -0.2, end: 0),
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => DatBanScreen()),
                         );
                       },
+                      icon: const Icon(Icons.table_restaurant, size: 18),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.deepPurple.shade700,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 4,
+                      ),
+                      label: const Text(
+                        "Đặt bàn ngay",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      child: const Text("Đặt bàn ngay"),
                     )
                         .animate()
                         .fadeIn(delay: 400.ms, duration: 600.ms)
                         .scale(begin: const Offset(0.8, 0.8)),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: OutlinedButton(
+                    child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => MenuScreen()),
                         );
                       },
+                      icon: const Icon(Icons.restaurant_menu, size: 18),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white70),
+                        side: const BorderSide(color: Colors.white, width: 2),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text("Xem thực đơn"),
+                      label: const Text(
+                        "Xem thực đơn",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
                     )
                         .animate()
                         .fadeIn(delay: 500.ms, duration: 600.ms)
@@ -310,6 +469,8 @@ class _HeroSection extends StatelessWidget {
               )
             ],
           ),
+            ),
+          ],
         ),
       ),
     )
@@ -327,39 +488,64 @@ class _MenuSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                "Menu đặc biệt",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onBackground,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.star,
+                  color: Colors.deepPurple.shade700,
+                  size: 20,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                "Một vài gợi ý cho hôm nay",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: colorScheme.onBackground.withOpacity(0.6),
-                ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Menu đặc biệt",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onBackground,
+                      letterSpacing: 0.15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Một vài gợi ý cho hôm nay",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colorScheme.onBackground.withOpacity(0.7),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          TextButton(
+          TextButton.icon(
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => MenuScreen()),
               );
             },
-            child: const Text("Xem tất cả"),
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            label: const Text(
+              "Xem tất cả",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.deepPurple.shade700,
+            ),
           )
         ],
       ),
@@ -825,76 +1011,130 @@ class _MenuCard extends StatelessWidget {
         : null;
 
     return Card(
-      elevation: 2,
+      elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
       margin: EdgeInsets.zero,
       color: Colors.white,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Hình ảnh menu với animation
             Expanded(
               flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: imageUrl != null
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: colorScheme.primary.withOpacity(0.1),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: imageUrl != null
+                        ? SizedBox.expand(
+                            child: Image.network(
+                              imageUrl,
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.center,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        colorScheme.primary.withOpacity(0.2),
+                                        colorScheme.primary.withOpacity(0.1),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.restaurant_menu,
+                                    size: 50,
+                                    color: colorScheme.primary,
+                                  ),
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) {
+                                  return child.animate()
+                                      .fadeIn(delay: (index * 100).ms, duration: 400.ms)
+                                      .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1));
+                                }
+                                return Shimmer.fromColors(
+                                  baseColor: Colors.grey[300]!,
+                                  highlightColor: Colors.grey[100]!,
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    color: Colors.grey.shade100,
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  colorScheme.primary.withOpacity(0.2),
+                                  colorScheme.primary.withOpacity(0.1),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
                             child: Icon(
                               Icons.restaurant_menu,
-                              size: 40,
+                              size: 50,
                               color: colorScheme.primary,
                             ),
-                          );
-                        },
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) {
-                            return child.animate()
-                                .fadeIn(delay: (index * 100).ms, duration: 400.ms)
-                                .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1));
-                          }
-                          return Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
-                            child: Container(
-                              color: Colors.grey.shade100,
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
+                          ),
+                  ),
+                  // Badge giảm giá nếu có
+                  if (menu.phanTramGiamGia != null && menu.phanTramGiamGia! > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [
-                              colorScheme.primary.withOpacity(0.1),
-                              colorScheme.primary.withOpacity(0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                            colors: [Colors.red.shade600, Colors.red.shade400],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '-${menu.phanTramGiamGia!.toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        child: Icon(
-                          Icons.restaurant_menu,
-                          size: 40,
-                          color: colorScheme.primary,
-                        ),
                       ),
+                    ),
+                ],
               ),
             ),
             // Thông tin menu
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                padding: const EdgeInsets.all(12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -905,72 +1145,48 @@ class _MenuCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          height: 1.2,
+                          height: 1.3,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const Spacer(),
                     if (menu.giaMenu != null) ...[
-                      Flexible(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                NumberFormat("#,###").format(menu.giaMenu!.toInt()),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const Text(
-                              " đ",
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              NumberFormat("#,###").format(menu.giaMenu!.toInt()),
                               style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            " đ",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
                       ),
                       if (menu.giaGoc != null &&
                           menu.giaGoc! > menu.giaMenu!) ...[
                         const SizedBox(height: 2),
-                        Flexible(
-                          child: Text(
-                            NumberFormat("#,###").format(menu.giaGoc!.toInt()),
-                            style: TextStyle(
-                              fontSize: 11,
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.grey.shade600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          NumberFormat("#,###").format(menu.giaGoc!.toInt()),
+                          style: TextStyle(
+                            fontSize: 11,
+                            decoration: TextDecoration.lineThrough,
+                            color: Colors.grey.shade500,
                           ),
-                        ),
-                      ],
-                      if (menu.phanTramGiamGia != null &&
-                          menu.phanTramGiamGia! > 0) ...[
-                        const SizedBox(height: 3),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            "Giảm ${menu.phanTramGiamGia!.toStringAsFixed(0)}%",
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.red.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],
