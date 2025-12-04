@@ -6,7 +6,8 @@ class HinhAnhMonAn {
   HinhAnhMonAn({required this.urlHinhAnh});
 
   factory HinhAnhMonAn.fromJson(Map<String, dynamic> json) {
-    final raw = (json['urlHinhAnh'] ?? '').toString();
+    // Backend có thể trả về urlHinhAnh hoặc URLHinhAnh (từ HinhAnhDTO)
+    final raw = (json['urlHinhAnh'] ?? json['URLHinhAnh'] ?? '').toString();
 
     // Nếu backend trả về path tương đối: "images/..." hoặc "/images/..."
     // thì ghép với imageBaseUrl để tạo URL đầy đủ.
@@ -30,5 +31,11 @@ class HinhAnhMonAn {
     return HinhAnhMonAn(
       urlHinhAnh: resolvedUrl,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'urlHinhAnh': urlHinhAnh,
+    };
   }
 }

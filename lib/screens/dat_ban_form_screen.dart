@@ -296,42 +296,85 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Đặt Bàn: $_tenCacBan', style: const TextStyle(fontSize: 16)),
+          title: Text(
+            'Đặt Bàn: $_tenCacBan',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.15,
+            ),
+          ),
           backgroundColor: Colors.deepPurple,
+          elevation: 0,
         ),
         body: Consumer<DatBanProvider>(
           builder: (context, provider, child) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(20.0),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.deepPurple.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.deepPurple.shade100),
+                        gradient: LinearGradient(
+                          colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.deepPurple.shade200, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurple.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        'Tổng sức chứa: $_tongSucChua người\n($_tenCacBan)',
-                        style: const TextStyle(
-                            color: Colors.deepPurple,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.table_restaurant, color: Colors.deepPurple.shade700, size: 24),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Tổng sức chứa: $_tongSucChua người',
+                                style: TextStyle(
+                                  color: Colors.deepPurple.shade900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _tenCacBan,
+                            style: TextStyle(
+                              color: Colors.deepPurple.shade700,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     TextFormField(
                       controller: _tenKhachController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Họ tên khách hàng',
-                        icon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person, color: Colors.deepPurple.shade700),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
                       ),
                       validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập tên' : null,
                     ),
@@ -342,29 +385,37 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _sdtController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Số điện thoại',
-                              icon: Icon(Icons.phone),
-                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.phone, color: Colors.deepPurple.shade700),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
                             ),
                             keyboardType: TextInputType.phone,
                             validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập SĐT' : null,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         ElevatedButton.icon(
                           onPressed: _isLookingUpCustomer ? null : _lookupCustomer,
                           icon: _isLookingUpCustomer
                               ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               : const Icon(Icons.search),
                           label: const Text('Tra cứu'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
                           ),
                         ),
                       ],
@@ -373,59 +424,112 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
                     // Hiển thị kết quả tra cứu
                     if (_lookupMessage != null)
                       Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: _lookupStatus == 'success'
-                              ? Colors.green.shade50
-                              : _lookupStatus == 'notfound'
-                                  ? Colors.orange.shade50
-                                  : Colors.red.shade50,
+                          gradient: LinearGradient(
+                            colors: _lookupStatus == 'success'
+                                ? [Colors.green.shade50, Colors.green.shade100]
+                                : _lookupStatus == 'notfound'
+                                    ? [Colors.orange.shade50, Colors.orange.shade100]
+                                    : [Colors.red.shade50, Colors.red.shade100],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           border: Border.all(
                             color: _lookupStatus == 'success'
-                                ? Colors.green
+                                ? Colors.green.shade300
                                 : _lookupStatus == 'notfound'
-                                    ? Colors.orange
-                                    : Colors.red,
+                                    ? Colors.orange.shade300
+                                    : Colors.red.shade300,
+                            width: 2,
                           ),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_lookupStatus == 'success'
+                                  ? Colors.green
+                                  : _lookupStatus == 'notfound'
+                                      ? Colors.orange
+                                      : Colors.red).withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          _lookupMessage!,
-                          style: TextStyle(
-                            color: _lookupStatus == 'success'
-                                ? Colors.green.shade900
-                                : _lookupStatus == 'notfound'
-                                    ? Colors.orange.shade900
-                                    : Colors.red.shade900,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _lookupStatus == 'success'
+                                  ? Icons.check_circle
+                                  : _lookupStatus == 'notfound'
+                                      ? Icons.info_outline
+                                      : Icons.error_outline,
+                              color: _lookupStatus == 'success'
+                                  ? Colors.green.shade700
+                                  : _lookupStatus == 'notfound'
+                                      ? Colors.orange.shade700
+                                      : Colors.red.shade700,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _lookupMessage!,
+                                style: TextStyle(
+                                  color: _lookupStatus == 'success'
+                                      ? Colors.green.shade900
+                                      : _lookupStatus == 'notfound'
+                                          ? Colors.orange.shade900
+                                          : Colors.red.shade900,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     const SizedBox(height: 16),
 
                     // Checkbox email notification
-                    CheckboxListTile(
-                      title: const Text('Tôi muốn nhận email xác nhận'),
-                      value: _wantEmailNotification,
-                      onChanged: (value) {
-                        setState(() {
-                          _wantEmailNotification = value ?? false;
-                        });
-                      },
-                      controlAffinity: ListTileControlAffinity.leading,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: CheckboxListTile(
+                        title: const Text(
+                          'Tôi muốn nhận email xác nhận',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        value: _wantEmailNotification,
+                        onChanged: (value) {
+                          setState(() {
+                            _wantEmailNotification = value ?? false;
+                          });
+                        },
+                        controlAffinity: ListTileControlAffinity.leading,
+                        activeColor: Colors.deepPurple,
+                      ),
                     ),
                     
                     // Ô nhập email (chỉ hiện khi muốn nhận email)
                     if (_wantEmailNotification)
                       Padding(
-                        padding: const EdgeInsets.only(left: 16, bottom: 16),
+                        padding: const EdgeInsets.only(left: 16, top: 12, bottom: 16),
                         child: TextFormField(
                           controller: _emailController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Email',
                             hintText: 'Nhập email để nhận vé đặt bàn',
-                            icon: Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email_outlined, color: Colors.deepPurple.shade700),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
@@ -585,29 +689,68 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
-                    Text('Thời gian khách đến:', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      'Thời gian khách đến',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        border: Border.all(color: Colors.grey.shade400),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: LinearGradient(
+                          colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(color: Colors.deepPurple.shade200, width: 2),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurple.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.calendar_month, color: Colors.deepPurple, size: 24),
-                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple.shade700,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.calendar_month, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 16),
                           Expanded(
-                            child: Text(
-                              DateFormat('dd/MM/yyyy, HH:mm').format(provider.selectedDateTime),
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  DateFormat('dd/MM/yyyy').format(provider.selectedDateTime),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.deepPurple.shade900,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  DateFormat('HH:mm').format(provider.selectedDateTime),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.deepPurple.shade700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -747,18 +890,22 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
                       }).toList(),
                     ],
                     
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     TextFormField(
                       controller: _ghiChuController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Yêu cầu đặc biệt (nếu có)',
-                        icon: Icon(Icons.note_alt),
-                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.note_alt, color: Colors.deepPurple.shade700),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
                       ),
                       maxLines: 3,
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 32),
                     
                     // Validation: Disable nút nếu không đủ sức chứa
                     Builder(
@@ -774,22 +921,33 @@ class _DatBanFormScreenState extends State<DatBanFormScreen> {
                           onPressed: (provider.isLoading || !canSubmit) 
                               ? null 
                               : () => _handleSubmit(provider),
-                      icon: provider.isLoading
-                          ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
-                      )
-                          : const Icon(Icons.check_circle_outline),
-                          label: Text(provider.isLoading 
-                              ? 'Đang xử lý...' 
-                              : canSubmit 
-                                  ? 'Gửi yêu cầu đặt bàn'
-                                  : 'Vui lòng điền đầy đủ thông tin'),
+                          icon: provider.isLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                                )
+                              : const Icon(Icons.check_circle_outline, size: 24),
+                          label: Text(
+                            provider.isLoading 
+                                ? 'Đang xử lý...' 
+                                : canSubmit 
+                                    ? 'Gửi yêu cầu đặt bàn'
+                                    : 'Vui lòng điền đầy đủ thông tin',
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: canSubmit ? Colors.green : Colors.grey,
-                            padding: const EdgeInsets.symmetric(vertical: 16.0),
-                            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18.0),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: canSubmit ? 4 : 0,
                           ),
                         );
                       },

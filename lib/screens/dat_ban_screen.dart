@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:front_end_app/services/ban_an_service.dart';
-import 'package:front_end_app/utils/QuickAlert.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ban_an.dart';
@@ -204,6 +203,7 @@ class _DatBanScreenState extends State<DatBanScreen> {
       body: Column(
         children: [
           _buildFilterBar(), // Gọi widget bộ lọc mới
+          _buildLegend(), // Chú thích trạng thái bàn
 
           Expanded(
             child: FutureBuilder<List<BanAn>>(
@@ -292,61 +292,108 @@ class _DatBanScreenState extends State<DatBanScreen> {
                       // Hiển thị thông tin tổng sức chứa đã chọn
                       if (_selectedTableIds.isNotEmpty)
                         Container(
-                          margin: const EdgeInsets.all(12),
-                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: hasEnoughCapacity 
-                                ? Colors.green.shade50 
-                                : Colors.orange.shade50,
+                            gradient: LinearGradient(
+                              colors: hasEnoughCapacity 
+                                  ? [Colors.green.shade50, Colors.green.shade100]
+                                  : [Colors.orange.shade50, Colors.orange.shade100],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                             border: Border.all(
                               color: hasEnoughCapacity 
-                                  ? Colors.green 
-                                  : Colors.orange,
+                                  ? Colors.green.shade300
+                                  : Colors.orange.shade300,
+                              width: 2,
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (hasEnoughCapacity ? Colors.green : Colors.orange).withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                'Tổng sức chứa đã chọn: $totalSelectedCapacity / $_selectedSoNguoi khách',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: (hasEnoughCapacity ? Colors.green : Colors.orange).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  hasEnoughCapacity ? Icons.check_circle : Icons.warning,
+                                  color: hasEnoughCapacity ? Colors.green.shade700 : Colors.orange.shade700,
+                                  size: 28,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              if (_selectedTableIds.isEmpty)
-                                const Text(
-                                  'Vui lòng chọn ít nhất một bàn để gửi yêu cầu đặt chỗ.',
-                                  style: TextStyle(color: Colors.orange),
-                                )
-                              else if (remainingGuests > 0)
-                                Text(
-                                  'Còn thiếu $remainingGuests chỗ. Vui lòng chọn thêm bàn hoặc giảm số khách.',
-                                  style: const TextStyle(color: Colors.orange),
-                                )
-                              else
-                                const Text(
-                                  'Đã đủ chỗ cho khách. Bạn vẫn có thể ghi chú thêm yêu cầu đặc biệt.',
-                                  style: TextStyle(color: Colors.green),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Tổng sức chứa: $totalSelectedCapacity / $_selectedSoNguoi khách',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: hasEnoughCapacity ? Colors.green.shade900 : Colors.orange.shade900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    if (remainingGuests > 0)
+                                      Text(
+                                        'Còn thiếu $remainingGuests chỗ. Vui lòng chọn thêm bàn.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.orange.shade800,
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        'Đã đủ chỗ cho khách.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.green.shade800,
+                                        ),
+                                      ),
+                                  ],
                                 ),
+                              ),
                             ],
                           ),
                         ),
                       Expanded(
                         child: GridView.builder(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.all(16.0),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
-                      childAspectRatio: 0.8,
-                      crossAxisSpacing: 10.0,
-                      mainAxisSpacing: 10.0,
+                      childAspectRatio: 0.85,
+                      crossAxisSpacing: 12.0,
+                      mainAxisSpacing: 12.0,
                     ),
                     itemCount: displayBanAns.length,
                     itemBuilder: (context, index) {
                       final banAn = displayBanAns[index];
-                      return _buildTableCard(context, banAn);
+                      return TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: Duration(milliseconds: 300 + (index * 50)),
+                        curve: Curves.easeOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Opacity(
+                              opacity: value,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _buildTableCard(context, banAn),
+                      );
                     },
                         ),
                       ),
@@ -356,7 +403,6 @@ class _DatBanScreenState extends State<DatBanScreen> {
               },
             ),
           ),
-          _buildLegend(),
         ],
       ),
       // Nút đặt bàn nổi với validation
@@ -373,9 +419,17 @@ class _DatBanScreenState extends State<DatBanScreen> {
                 final hasEnoughCapacity = totalCapacity >= _selectedSoNguoi;
                 
                 return FloatingActionButton.extended(
-                  label: Text(hasEnoughCapacity ? "Đặt bàn" : "Thiếu $remainingGuests chỗ"),
-                  icon: const Icon(Icons.check),
+                  label: Text(
+                    hasEnoughCapacity ? "Đặt bàn" : "Thiếu $remainingGuests chỗ",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  icon: Icon(hasEnoughCapacity ? Icons.check_circle : Icons.warning),
                   backgroundColor: hasEnoughCapacity ? Colors.deepPurple : Colors.orange,
+                  elevation: 4,
                   onPressed: () async {
                               // 1. Kiểm tra: Nếu chưa chọn bàn nào thì báo lỗi
                               if (_selectedTablesList.isEmpty) {
@@ -464,10 +518,16 @@ class _DatBanScreenState extends State<DatBanScreen> {
 // --- 3. WIDGET THANH LỌC (ĐÃ SỬA ĐỂ GỌI CÁC HÀM Ở TRÊN) ---
   Widget _buildFilterBar() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -475,74 +535,129 @@ class _DatBanScreenState extends State<DatBanScreen> {
           Row(
             children: [
               Expanded(
-                child: InkWell(
-                  onTap: _pickDateTime, // <--- GỌI HÀM CỦA BẠN Ở ĐÂY
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.calendar_today, size: 18, color: Colors.deepPurple),
-                        const SizedBox(width: 6),
-                        Text(DateFormat('dd/MM/yyyy').format(_selectedDateTime), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _pickDateTime,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.shade50,
+                        border: Border.all(color: Colors.deepPurple.shade200),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_today, size: 20, color: Colors.deepPurple.shade700),
+                          const SizedBox(width: 8),
+                          Text(
+                            DateFormat('dd/MM/yyyy').format(_selectedDateTime),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.deepPurple.shade900,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
-                child: InkWell(
-                  onTap: _pickDateTime, // <--- GỌI HÀM CỦA BẠN Ở ĐÂY (Chọn giờ chung logic)
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.access_time, size: 18, color: Colors.deepPurple),
-                        const SizedBox(width: 6),
-                        Text(DateFormat('HH:mm').format(_selectedDateTime), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _pickDateTime,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.shade50,
+                        border: Border.all(color: Colors.deepPurple.shade200),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.access_time, size: 20, color: Colors.deepPurple.shade700),
+                          const SizedBox(width: 8),
+                          Text(
+                            DateFormat('HH:mm').format(_selectedDateTime),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.deepPurple.shade900,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // HÀNG 2: SỐ NGƯỜI & TẦNG
           Row(
             children: [
-              InkWell(
-                onTap: _pickSoNguoi, // <--- GỌI HÀM CỦA BẠN Ở ĐÂY
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.people, size: 18, color: Colors.deepPurple),
-                      const SizedBox(width: 6),
-                      Text("$_selectedSoNguoi người", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _pickSoNguoi,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      border: Border.all(color: Colors.deepPurple.shade200),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.people, size: 20, color: Colors.deepPurple.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          "$_selectedSoNguoi người",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.deepPurple.shade900,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
 
               // Dropdown chọn Tầng
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.shade50,
+                    border: Border.all(color: Colors.deepPurple.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedTang,
                       isExpanded: true,
-                      icon: const Icon(Icons.arrow_drop_down, color: Colors.deepPurple),
-                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500, fontSize: 15),
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.deepPurple.shade700),
+                      style: TextStyle(
+                        color: Colors.deepPurple.shade900,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      dropdownColor: Colors.white,
                       onChanged: (String? newValue) {
                         if (newValue != null) {
                           setState(() {
@@ -570,36 +685,15 @@ class _DatBanScreenState extends State<DatBanScreen> {
     );
   }
 
-  Widget _buildFilterButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.deepPurple),
-      label: Text(
-        label,
-        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-      ),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-          side: BorderSide(color: Colors.grey.shade300),
-        ),
-      ),
-    );
-  }
-
-
   Widget _buildTableCard(BuildContext context, BanAn banAn) {
     final isSelected = _selectedTableIds.contains(banAn.maBan);
     final status = banAn.tenTrangThai;
     final color = _getColorForStatus(status, isSelected);
 
-    return GestureDetector(
-      onTap: () {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
         // Chuẩn hóa trạng thái (giống web khách hàng)
         final normalizedStatus = status?.toLowerCase().trim() ?? '';
         
@@ -658,40 +752,102 @@ class _DatBanScreenState extends State<DatBanScreen> {
         }
         
         // Mặc định: không làm gì
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: color, width: isSelected ? 3 : 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.table_restaurant_rounded, size: 30.0, color: color),
-            const SizedBox(height: 4.0),
-            Text(banAn.tenBan ?? "", style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-            Text('${banAn.sucChua} ghế', style: const TextStyle(fontSize: 12)),
-
-            // Hiển thị nhãn phụ
-            Builder(
-              builder: (context) {
-                if (status == null) return const SizedBox.shrink();
-                final normalizedStatus = status.toLowerCase();
-                if (normalizedStatus.contains('của tôi') || 
-                    normalizedStatus.contains('của bạn') ||
-                    normalizedStatus == 'cuatui') {
-                  return const Text('(Của bạn)', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold));
-                } else if (normalizedStatus.contains('không đủ') || 
-                           normalizedStatus.contains('cần ghép') ||
-                           normalizedStatus.contains('sức chứa nhỏ') ||
-                           normalizedStatus == 'canghep') {
-                  return const Text('(Ghép bàn)', style: TextStyle(fontSize: 10, color: Colors.orange));
-                }
-                return const SizedBox.shrink();
-              },
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.15) : color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color,
+              width: isSelected ? 3 : 2,
             ),
-          ],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.table_restaurant_rounded,
+                size: 36.0,
+                color: color,
+              ),
+              const SizedBox(height: 8.0),
+              Text(
+                banAn.tenBan ?? "",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${banAn.sucChua} ghế',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+
+              // Hiển thị nhãn phụ
+              Builder(
+                builder: (context) {
+                  if (status == null) return const SizedBox.shrink();
+                  final normalizedStatus = status.toLowerCase();
+                  if (normalizedStatus.contains('của tôi') || 
+                      normalizedStatus.contains('của bạn') ||
+                      normalizedStatus == 'cuatui') {
+                    return Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Của bạn',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.purple,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  } else if (normalizedStatus.contains('không đủ') || 
+                             normalizedStatus.contains('cần ghép') ||
+                             normalizedStatus.contains('sức chứa nhỏ') ||
+                             normalizedStatus == 'canghep') {
+                    return Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Ghép bàn',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -910,107 +1066,54 @@ class _DatBanScreenState extends State<DatBanScreen> {
       (Match m) => '${m[1]},',
     );
   }
-
-
-  // == HÀM XÁC NHẬN ĐẶT BÀN (GỘP BÀN) ==
-  void _onConfirmBooking() {
-    // Tính tổng sức chứa
-    int totalSeats = _selectedTablesList.fold(0, (sum, item) => sum + (item.sucChua ?? 0));
-
-    if (totalSeats < _selectedSoNguoi) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text("Chưa đủ chỗ"),
-          content: Text("Bạn đi $_selectedSoNguoi người nhưng các bàn đã chọn chỉ chứa được $totalSeats người. Bạn có muốn chọn thêm không?"),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Chọn thêm")),
-            TextButton(onPressed: () {
-              Navigator.pop(ctx);
-              _navigateToForm(); // Vẫn cho đặt
-            }, child: const Text("Vẫn đặt", style: TextStyle(color: Colors.red))),
-          ],
-        ),
-      );
-    } else {
-      _navigateToForm();
-    }
-  }
-
-  void _navigateToForm() {
-    // Kiểm tra rỗng
-    if (_selectedTablesList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn ít nhất 1 bàn!')),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DatBanFormScreen(
-          // Truyền danh sách bàn, số lượng người và thời gian
-          danhSachBan: _selectedTablesList,
-          soNguoi: _selectedSoNguoi,
-          thoiGian: _selectedDateTime,
-        ),
-      ),
-    ).then((result) {
-      // Khi quay lại (đặt thành công), refresh lại màn hình
-      if (result == true) {
-        _loadFilteredTables();
-      }
-    });
-  }
-
-
   // == 11. Cập nhật Chú thích ==
   Widget _buildLegend() {
     return Container(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, -3),
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16.0),
-          topRight: Radius.circular(16.0),
-        ),
       ),
-      child: Wrap(
-        spacing: 8.0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildLegendItem(Colors.green, 'Trống'),
-          _buildLegendItem(Colors.orange, 'Ghép'),
-          _buildLegendItem(Colors.purpleAccent, 'Của bạn'),
-          _buildLegendItem(Colors.red.shade200, 'Đã đặt'),
+          _buildLegendItem(Colors.green, 'Trống', Icons.check_circle),
+          const SizedBox(width: 24),
+          _buildLegendItem(Colors.orange, 'Ghép', Icons.table_restaurant),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem(Color color, String text) {
+  Widget _buildLegendItem(Color color, String text, IconData icon) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 20.0,
-          height: 20.0,
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4.0),
-            border: Border.all(color: Colors.black54, width: 0.5),
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color, width: 1.5),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
           ),
         ),
-        const SizedBox(width: 8.0),
-        Text(text, style: const TextStyle(fontSize: 14.0)),
       ],
     );
   }

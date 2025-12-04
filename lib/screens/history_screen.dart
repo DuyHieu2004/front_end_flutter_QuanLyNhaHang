@@ -110,7 +110,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildBookingCard(dynamic booking) {
+  Widget _buildBookingCard(dynamic booking, int index) {
     DateTime thoiGianBatDau;
     try {
       if (booking['thoiGianBatDau'] != null) {
@@ -140,87 +140,176 @@ class _HistoryScreenState extends State<HistoryScreen> {
     bool hoanThanh = maTrangThai == "DA_HOAN_THANH";
     bool coTheHuy = booking['coTheHuy'] ?? false;
 
-    return Card(
-      elevation: 4.0,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      child: InkWell(
-        onTap: () => _showBookingDetail(booking['maDonHang'] ?? booking['MaDonHang'] ?? ""),
-        borderRadius: BorderRadius.circular(12.0),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(
-                daHuy ? Icons.cancel : (hoanThanh ? Icons.check_circle : Icons.access_time_filled),
-                color: daHuy ? Colors.red : (hoanThanh ? Colors.green : Colors.blue),
-                size: 40,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        elevation: 3,
+        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+        child: InkWell(
+          onTap: () => _showBookingDetail(booking['maDonHang'] ?? booking['MaDonHang'] ?? ""),
+          borderRadius: BorderRadius.circular(16.0),
+          child: Container(
+            padding: const EdgeInsets.all(18.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: daHuy
+                    ? [Colors.red.shade50, Colors.red.shade100]
+                    : hoanThanh
+                        ? [Colors.green.shade50, Colors.green.shade100]
+                        : [Colors.blue.shade50, Colors.blue.shade100],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            booking['tenBan'] ?? booking['TenBan'] ?? "Bàn ?",
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: daHuy ? Colors.red.shade50 : Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            daHuy ? "Đã hủy" : tenTrangThai,
-                            style: TextStyle(
-                              color: daHuy ? Colors.red : Colors.green.shade700,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: daHuy
+                        ? Colors.red.shade200
+                        : hoanThanh
+                            ? Colors.green.shade200
+                            : Colors.blue.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    daHuy
+                        ? Icons.cancel
+                        : hoanThanh
+                            ? Icons.check_circle
+                            : Icons.access_time_filled,
+                    color: daHuy
+                        ? Colors.red.shade900
+                        : hoanThanh
+                            ? Colors.green.shade900
+                            : Colors.blue.shade900,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              booking['tenBan'] ?? booking['TenBan'] ?? "Bàn ?",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: daHuy
+                                  ? Colors.red.shade700
+                                  : hoanThanh
+                                      ? Colors.green.shade700
+                                      : Colors.blue.shade700,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              daHuy ? "Đã hủy" : tenTrangThai,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.receipt_long, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Mã đơn: ${booking['maDonHang'] ?? booking['MaDonHang'] ?? 'N/A'}",
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Thời gian: $formattedTime",
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                      if (formattedDuKien != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule, size: 14, color: Colors.blue.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Dự kiến: $formattedDuKien",
+                              style: TextStyle(fontSize: 13, color: Colors.blue.shade700),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Mã đơn: ${booking['maDonHang'] ?? booking['MaDonHang'] ?? 'N/A'}",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Thời gian đặt: $formattedTime",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    if (formattedDuKien != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        "Dự kiến: $formattedDuKien",
-                        style: TextStyle(fontSize: 14, color: Colors.blue[700]),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.people, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Số khách: ${booking['soLuongNguoi'] ?? booking['SoLuongNguoi'] ?? 0}",
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ],
                       ),
                     ],
-                    const SizedBox(height: 4),
-                    Text(
-                      "Số khách: ${booking['soLuongNguoi'] ?? booking['SoLuongNguoi'] ?? 0}",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              if (coTheHuy)
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[400]),
-                  onPressed: () => _cancelBooking(booking['maDonHang'] ?? booking['MaDonHang'] ?? ""),
-                  child: const Text("Hủy", style: TextStyle(color: Colors.white)),
-                )
-              else
-                const Icon(Icons.chevron_right),
-            ],
+                if (coTheHuy)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: () => _cancelBooking(booking['maDonHang'] ?? booking['MaDonHang'] ?? ""),
+                      child: const Text(
+                        "Hủy",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  )
+                else
+                  Icon(Icons.chevron_right, color: Colors.grey.shade400),
+              ],
+            ),
           ),
         ),
       ),
@@ -234,53 +323,108 @@ class _HistoryScreenState extends State<HistoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    "Tra cứu lịch sử đặt bàn",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.shade700,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.history, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          "Tra cứu lịch sử đặt bàn",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.15,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: _phoneController,
                     decoration: InputDecoration(
                       labelText: "Số điện thoại",
                       hintText: "Nhập số điện thoại đã dùng để đặt bàn",
-                      prefixIcon: const Icon(Icons.phone),
+                      prefixIcon: Icon(Icons.phone, color: Colors.deepPurple.shade700),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                     keyboardType: TextInputType.phone,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _isSearching ? null : _searchByPhone,
                     icon: _isSearching
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                           )
-                        : const Icon(Icons.search),
-                    label: Text(_isSearching ? "Đang tra cứu..." : "Xem lịch sử"),
+                        : const Icon(Icons.search, size: 22),
+                    label: Text(
+                      _isSearching ? "Đang tra cứu..." : "Xem lịch sử",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 3,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Hệ thống sẽ tìm theo đúng số điện thoại từng dùng khi đặt bàn.",
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Hệ thống sẽ tìm theo đúng số điện thoại từng dùng khi đặt bàn.",
+                            style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -344,7 +488,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               )
             else
-              ..._searchBookings.map((booking) => _buildBookingCard(booking)),
+              ..._searchBookings.asMap().entries.map((entry) => _buildBookingCard(entry.value, entry.key)),
           ],
         ],
       ),
@@ -357,6 +501,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         title: const Text("Lịch Sử Đặt Bàn"),
         backgroundColor: Colors.deepPurple,
+        elevation: 0,
       ),
       body: _buildSearchTab(),
     );
