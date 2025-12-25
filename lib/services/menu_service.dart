@@ -68,5 +68,29 @@ class MenuService {
       rethrow;
     }
   }
+
+  /// Lấy menu hiện tại theo khung giờ tự động (đồng bộ với React web)
+  /// API trả về: { success: true, khungGio, tenKhungGio, isNgayLe, timeRemaining, nextTimeSlot, data: [...] }
+  Future<Map<String, dynamic>> fetchMenuHienTai() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/MenuAPI/HienTai');
+      final response = await http.get(uri);
+      
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(utf8.decode(response.bodyBytes));
+        
+        if (jsonData is Map) {
+          return Map<String, dynamic>.from(jsonData);
+        } else {
+          throw Exception('Unexpected response format: expected Map');
+        }
+      } else {
+        throw Exception('Failed to load current menu: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching current menu: $e');
+      rethrow;
+    }
+  }
 }
 

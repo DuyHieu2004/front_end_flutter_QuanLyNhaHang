@@ -23,9 +23,7 @@ class MenuViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get selectedMaDanhMuc => _selectedMaDanhMuc;
 
-  MenuViewModel() {
-    fetchInitialData();
-  }
+  MenuViewModel();
 
 
   Future<void> fetchInitialData() async {
