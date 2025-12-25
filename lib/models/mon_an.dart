@@ -23,37 +23,70 @@ class MonAn {
   });
 
   factory MonAn.fromJson(Map<String, dynamic> json) {
-    // Parse hình ảnh
-    final hinhAnhList = (json['hinhAnhMonAns'] ?? json['HinhAnhMonAns'] as List?) ?? [];
-    final images = hinhAnhList.map((i) {
-      // Backend trả về HinhAnhDTO với URLHinhAnh
-      if (i is Map<String, dynamic>) {
+    // Xử lý cả PascalCase và camelCase cho tất cả fields
+    final maMonAnValue = json['maMonAn'] ?? json['MaMonAn'];
+    final tenMonAnValue = json['tenMonAn'] ?? json['TenMonAn'];
+    final maDanhMucValue = json['maDanhMuc'] ?? json['MaDanhMuc'];
+    final tenDanhMucValue = json['tenDanhMuc'] ?? json['TenDanhMuc'];
+    final isShowValue = json['isShow'] ?? json['IsShow'] ?? true;
+    
+    // Parse hình ảnh - xử lý cả PascalCase và camelCase
+    final hinhAnhList = json['hinhAnhMonAns'] ?? json['HinhAnhMonAns'] ?? [];
+    final List<dynamic> hinhAnhListNormalized = hinhAnhList is List ? hinhAnhList : [];
+    
+    final images = hinhAnhListNormalized.map((i) {
+      // Backend trả về HinhAnhDTO với URLHinhAnh hoặc urlHinhAnh
+      if (i is Map) {
+        final map = Map<String, dynamic>.from(i);
         return HinhAnhMonAn.fromJson({
-          'urlHinhAnh': i['urlHinhAnh'] ?? i['URLHinhAnh'] ?? '',
+          'urlHinhAnh': map['urlHinhAnh'] ?? map['URLHinhAnh'] ?? map['UrlHinhAnh'] ?? '',
         });
       }
-      return HinhAnhMonAn.fromJson(i);
+      return HinhAnhMonAn.fromJson({});
     }).toList();
 
-    // Parse phiên bản món ăn
-    final phienBanList = (json['phienBanMonAns'] ?? json['PhienBanMonAns'] as List?) ?? [];
-    final phienBans = phienBanList.map((pb) => PhienBanMonAn.fromJson(pb)).toList();
+    // Parse phiên bản món ăn - xử lý cả PascalCase và camelCase
+    final phienBanList = json['phienBanMonAns'] ?? json['PhienBanMonAns'] ?? [];
+    final List<dynamic> phienBanListNormalized = phienBanList is List ? phienBanList : [];
+    final phienBans = phienBanListNormalized.map((pb) {
+      if (pb is Map) {
+        return PhienBanMonAn.fromJson(Map<String, dynamic>.from(pb));
+      }
+      return PhienBanMonAn.fromJson({});
+    }).toList();
 
     // Tính giá mặc định (giá nhỏ nhất từ các phiên bản)
     double defaultGia = 0.0;
     if (phienBans.isNotEmpty) {
-      defaultGia = phienBans.map((pb) => pb.gia).reduce((a, b) => a < b ? a : b);
-    } else if (json['gia'] != null) {
-      defaultGia = (json['gia'] is num) ? (json['gia'] as num).toDouble() : 0.0;
+      final prices = phienBans.map((pb) => pb.gia).where((p) => p > 0);
+      if (prices.isNotEmpty) {
+        defaultGia = prices.reduce((a, b) => a < b ? a : b);
+      }
+    }
+    
+    // Nếu không có phiên bản, lấy giá trực tiếp từ JSON
+    if (defaultGia == 0.0) {
+      final giaValue = json['gia'] ?? json['Gia'];
+      if (giaValue != null) {
+        defaultGia = (giaValue is num) ? giaValue.toDouble() : (double.tryParse(giaValue.toString()) ?? 0.0);
+      }
+    }
+
+    // Validate required fields
+    if (maMonAnValue == null || maMonAnValue.toString().isEmpty) {
+      throw Exception('maMonAn is required but was null or empty. JSON: $json');
+    }
+    if (tenMonAnValue == null || tenMonAnValue.toString().isEmpty) {
+      throw Exception('tenMonAn is required but was null or empty. JSON: $json');
     }
 
     return MonAn(
-      maMonAn: json['maMonAn'] ?? json['MaMonAn'] ?? '',
-      tenMonAn: json['tenMonAn'] ?? json['TenMonAn'] ?? '',
+      maMonAn: maMonAnValue.toString(),
+      tenMonAn: tenMonAnValue.toString(),
       gia: defaultGia,
-      maDanhMuc: json['maDanhMuc'] ?? json['MaDanhMuc'] ?? '',
-      tenDanhMuc: json['tenDanhMuc'] ?? json['TenDanhMuc'],
-      isShow: json['isShow'] ?? json['IsShow'] ?? true,
+      maDanhMuc: maDanhMucValue?.toString() ?? '',
+      tenDanhMuc: tenDanhMucValue?.toString(),
+      isShow: isShowValue is bool ? isShowValue : (isShowValue.toString().toLowerCase() == 'true'),
       hinhAnhMonAns: images,
       phienBanMonAns: phienBans,
     );

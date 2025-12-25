@@ -249,16 +249,39 @@ class _HomeContentState extends State<_HomeContent> {
     });
 
     try {
-      final menus = await _menuService.fetchMenusDangApDung();
+      // Dùng fetchMenuHienTai() để đồng bộ với React web
+      final response = await _menuService.fetchMenuHienTai();
+      final data = response['data'] ?? [];
+      final menus = (data as List).map((m) => Menu.fromJson(m)).toList();
+      
       setState(() {
         _menus = menus;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error loading menus in home screen: $e');
+      print('Stack trace: $stackTrace');
+      
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
+      
+      // Hiển thị error message cho user nếu widget còn mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể tải menu. Vui lòng thử lại sau.'),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Thử lại',
+              textColor: Colors.white,
+              onPressed: () => _loadMenus(),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -845,6 +868,7 @@ class _SpecialMenuList extends StatelessWidget {
 
     // Hiển thị menu đặc biệt theo dạng GridView 2 cột
     return GridView.builder(
+      cacheExtent: 500, // Cache items để tối ưu performance
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -856,10 +880,12 @@ class _SpecialMenuList extends StatelessWidget {
       itemCount: displayMenus.length,
       itemBuilder: (context, index) {
         final menu = displayMenus[index];
-        return _MenuCard(
-          menu: menu,
-          index: index,
-          onTap: () => _showMenuDetail(context, menu),
+        return RepaintBoundary(
+          child: _MenuCard(
+            menu: menu,
+            index: index,
+            onTap: () => _showMenuDetail(context, menu),
+          ),
         );
       },
     );
