@@ -256,11 +256,29 @@ class _DatBanScreenState extends State<DatBanScreen> {
                 }).toList();
 
                 // 3. Lọc theo tầng đang chọn
-                List<BanAn> displayBanAns = filteredByStatus;
+                List<BanAn> tempByTang = filteredByStatus;
                 if (_selectedTang != "Tất cả") {
-                  // So sánh tên tầng (API trả về trong trường tenTang)
-                  displayBanAns = filteredByStatus.where((b) => b.tenTang == _selectedTang).toList();
+                  tempByTang = filteredByStatus.where((b) => b.tenTang == _selectedTang).toList();
                 }
+
+
+                // Logic:
+                // - Bàn nhỏ hơn khách (để ghép) -> GIỮ (hiệu là số âm)
+                // - Bàn lớn hơn khách nhưng dư <= 4 ghế -> GIỮ
+                // - Bàn quá to (dư > 4 ghế) -> ẨN LUÔN
+
+                final int MAX_EXTRA_SEATS = 3; // Cho phép dư tối đa 4 ghế
+
+                List<BanAn> displayBanAns = tempByTang.where((b) {
+                  int sucChua = b.sucChua ?? 0;
+
+                  // Tính số ghế dư ra
+                  int gheDu = sucChua - _selectedSoNguoi;
+
+                  // Chỉ giữ lại nếu số ghế dư <= 4
+                  // (Nếu bàn nhỏ hơn khách thì gheDu là số âm, vẫn thỏa mãn <= 4 -> Vẫn hiện để ghép)
+                  return gheDu <= MAX_EXTRA_SEATS;
+                }).toList();
 
                 if (displayBanAns.isEmpty) {
                   return Center(

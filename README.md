@@ -111,7 +111,30 @@ Connect via USB and run this command to map localhost to the mobile device (reve
     ```bash
     flutter run
     ```
+### 3. Configure Physical Device Connection with Backend (Important ⚠️)
+By default, Android devices cannot resolve `localhost` as your computer. To allow the app on your phone to call the API running on your computer (e.g., at port **5555**), you need to perform **Port Forwarding**.
 
+**Step 3.1: Check Connected Devices**
+Ensure **USB Debugging** is enabled on your phone and it is connected to the computer. Check the device ID by running:
+
+```bash
+adb devices
+```
+You should see your device listed, e.g.:
+
+```bash
+    List of devices attached
+  emulator-5554   device
+  8493x0202       device
+```
+
+**Step 3.2: Set Up Port Forwarding**
+Run the following command, replacing `YOUR_DEVICE_ID` with your actual device ID from the previous
+step:
+
+```bash
+adb -s YOUR_DEVICE_ID reverse tcp:5555 tcp:5555
+```
 ---
 
 ## 📂 Project Structure
