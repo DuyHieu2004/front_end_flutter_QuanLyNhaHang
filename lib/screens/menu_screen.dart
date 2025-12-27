@@ -21,21 +21,25 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   late TabController _tabController;
   final MenuService _menuService = MenuService();
   final TextEditingController _searchController = TextEditingController();
+  
+  // --- COLOR PALETTE (MÀU SẮC MỚI) ---
+  final Color _wineRed = const Color(0xFF800020); // Đỏ rượu vang
+  final Color _lightWine = const Color(0xFFA52A2A); // Đỏ nhạt
+  final Color _bgWhite = const Color(0xFFFAFAFA); // Nền trắng ngà
+
+  // --- CÁC BIẾN LOGIC (GIỮ NGUYÊN) ---
   String _searchQuery = '';
   String _sortBy = 'name';
   String? _selectedCategory;
   
-  // Menu đang áp dụng
   List<Menu> _menusDangApDung = [];
   bool _loadingMenusDangApDung = false;
   
-  // Thực đơn điện tử - món ăn theo danh mục
   List<MonAn> _monAnsTheoDanhMuc = [];
   List<DanhMuc> _danhMucsEMenu = [];
   bool _loadingEMenu = false;
   String? _selectedEMenuCategory;
   
-  // Tất cả món
   List<MonAn> _allMonAns = [];
   bool _loadingAllMon = false;
   List<String> _categories = [];
@@ -51,6 +55,8 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     _loadCategories();
     _loadEMenuData();
   }
+
+  // --- PHẦN LOGIC DATA (GIỮ NGUYÊN) ---
 
   Future<void> _loadMenusDangApDung() async {
     setState(() => _loadingMenusDangApDung = true);
@@ -88,6 +94,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   }
 
   String _getTenDanhMuc(String maDanhMuc) {
+    if (_danhMucsEMenu.isEmpty) return 'Khác';
     final danhMuc = _danhMucsEMenu.firstWhere(
       (dm) => dm.maDanhMuc == maDanhMuc,
       orElse: () => DanhMuc(maDanhMuc: maDanhMuc, tenDanhMuc: 'Khác'),
@@ -129,24 +136,23 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   List<MonAn> get _filteredMonAns {
     var filtered = _allMonAns;
     
-    // Filter by category
     if (_selectedCategory != null && _selectedCategory!.isNotEmpty) {
       final viewModel = Provider.of<MenuViewModel>(context, listen: false);
-      final category = viewModel.danhMucs.firstWhere(
-        (dm) => dm.tenDanhMuc == _selectedCategory,
-        orElse: () => viewModel.danhMucs.first,
-      );
-      filtered = filtered.where((m) => m.maDanhMuc == category.maDanhMuc).toList();
+      if (viewModel.danhMucs.isNotEmpty) {
+        final category = viewModel.danhMucs.firstWhere(
+          (dm) => dm.tenDanhMuc == _selectedCategory,
+          orElse: () => viewModel.danhMucs.first,
+        );
+        filtered = filtered.where((m) => m.maDanhMuc == category.maDanhMuc).toList();
+      }
     }
     
-    // Filter by search
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((m) {
         return m.tenMonAn.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
     
-    // Sort
     if (_sortBy == 'price-asc') {
       filtered.sort((a, b) => a.gia.compareTo(b.gia));
     } else if (_sortBy == 'price-desc') {
@@ -161,6 +167,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   List<MonAn> get _paginatedMonAns {
     final start = (_currentPage - 1) * _itemsPerPage;
     final end = start + _itemsPerPage;
+    if (start >= _filteredMonAns.length) return [];
     return _filteredMonAns.sublist(
       start,
       end > _filteredMonAns.length ? _filteredMonAns.length : end,
@@ -169,28 +176,6 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
 
   int get _totalPages => (_filteredMonAns.length / _itemsPerPage).ceil();
 
-  String _formatTime(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-  }
-
-  String _getKhungGioIcon(String? khungGio) {
-    switch (khungGio) {
-      case 'SANG':
-        return '🌅';
-      case 'TRUA':
-        return '☀️';
-      case 'CHIEU':
-        return '🌆';
-      case 'TOI':
-        return '🌙';
-      default:
-        return '🍽️';
-    }
-  }
-
   @override
   void dispose() {
     _tabController.dispose();
@@ -198,33 +183,60 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  // --- PHẦN GIAO DIỆN MỚI ---
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bgWhite,
       appBar: AppBar(
-        title: const Text(
-          'Thực đơn',
+        backgroundColor: Colors.white,
+        title: Text(
+          'THỰC ĐƠN',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.15,
+            color: _wineRed,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.0,
+            fontSize: 20,
           ),
         ),
+        centerTitle: true,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.deepPurple.shade700,
-          indicatorWeight: 3,
-          labelColor: Colors.deepPurple.shade700,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: _wineRed,
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: _wineRed.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.grey.shade600,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              overlayColor: MaterialStateProperty.all(Colors.transparent),
+              tabs: const [
+                Tab(text: 'Combo Menu'),
+                Tab(text: 'E-Menu'),
+                Tab(text: 'Tất cả'),
+              ],
+            ),
           ),
-          unselectedLabelColor: Colors.grey.shade600,
-          tabs: const [
-            Tab(text: 'Menu'),
-            Tab(text: 'Thực đơn điện tử'),
-            Tab(text: 'Tất cả món'),
-          ],
         ),
       ),
       body: TabBarView(
@@ -240,116 +252,77 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
 
   Widget _buildMenuDangApDung() {
     if (_loadingMenusDangApDung) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(color: _wineRed));
     }
 
     return RefreshIndicator(
+      color: _wineRed,
       onRefresh: _loadMenusDangApDung,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple.shade600, Colors.indigo.shade600],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_wineRed, _lightWine],
                 ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.restaurant_menu,
-                          size: 32,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Menu Đang Áp Dụng',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Danh sách menu hiện đang được áp dụng',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: _wineRed.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-            ).animate().fadeIn(duration: 600.ms).scale(),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.star, size: 32, color: Colors.amber),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Menu Ưu Đãi',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Các combo đang được áp dụng',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.1, end: 0),
+            
             const SizedBox(height: 24),
             
-            // Danh sách menu
             if (_menusDangApDung.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(32),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.restaurant_menu,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Chưa có menu nào đang áp dụng',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Vui lòng quay lại sau',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade500,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              )
+              _buildEmptyState('Chưa có menu nào đang áp dụng')
             else
               GridView.builder(
                 shrinkWrap: true,
@@ -362,22 +335,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                 ),
                 itemCount: _menusDangApDung.length,
                 itemBuilder: (context, index) {
-                  final menu = _menusDangApDung[index];
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: Duration(milliseconds: 300 + (index * 50)),
-                    curve: Curves.easeOut,
-                    builder: (context, value, child) {
-                      return Transform.scale(
-                        scale: value,
-                        child: Opacity(
-                          opacity: value,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _buildMenuCard(menu, index),
-                  );
+                  return _buildMenuCard(_menusDangApDung[index], index);
                 },
               ),
           ],
@@ -388,13 +346,11 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
 
   Widget _buildEMenuView() {
     if (_loadingEMenu) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(color: _wineRed));
     }
 
-    // Lọc món ăn theo danh mục đã chọn
     List<MonAn> filteredMonAns = _monAnsTheoDanhMuc;
     if (_selectedEMenuCategory != null && _selectedEMenuCategory!.isNotEmpty) {
-      // Tìm maDanhMuc từ tenDanhMuc
       final selectedDanhMuc = _danhMucsEMenu.firstWhere(
         (dm) => dm.tenDanhMuc == _selectedEMenuCategory,
         orElse: () => DanhMuc(maDanhMuc: '', tenDanhMuc: ''),
@@ -406,7 +362,6 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
       }
     }
 
-    // Nhóm món ăn theo danh mục
     Map<String, List<MonAn>> monAnsByCategory = {};
     for (var monAn in filteredMonAns) {
       String category = _getTenDanhMuc(monAn.maDanhMuc);
@@ -417,61 +372,33 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     }
 
     return RefreshIndicator(
+      color: _wineRed,
       onRefresh: _loadEMenuData,
       child: Column(
         children: [
-          // Filter danh mục
           if (_danhMucsEMenu.isNotEmpty)
             Container(
               height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.only(top: 8),
               child: ListView(
                 scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  _buildEMenuCategoryChip('Tất cả', null),
+                  _buildFilterChip('Tất cả', null, isEMenu: true),
                   const SizedBox(width: 8),
                   ..._danhMucsEMenu.map((dm) => Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: _buildEMenuCategoryChip(dm.tenDanhMuc, dm.tenDanhMuc),
+                    child: _buildFilterChip(dm.tenDanhMuc, dm.tenDanhMuc, isEMenu: true),
                   )),
                 ],
               ),
             ),
           
-          // Danh sách món ăn theo danh mục
           Expanded(
             child: monAnsByCategory.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.restaurant_menu,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Chưa có món ăn nào',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  )
+                ? _buildEmptyState('Chưa có món ăn nào')
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                     itemCount: monAnsByCategory.length,
                     itemBuilder: (context, categoryIndex) {
                       final category = monAnsByCategory.keys.elementAt(categoryIndex);
@@ -480,44 +407,36 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Tiêu đề danh mục
                           Padding(
-                            padding: EdgeInsets.only(bottom: 12, top: categoryIndex > 0 ? 24 : 0),
+                            padding: EdgeInsets.only(bottom: 12, top: categoryIndex > 0 ? 24 : 12),
                             child: Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  width: 4,
+                                  height: 24,
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.deepPurple.shade600,
-                                        Colors.indigo.shade600,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    category,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    color: _wineRed,
+                                    borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  '(${monAns.length} món)',
+                                  category.toUpperCase(),
                                   style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
+                                    color: _wineRed,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
                                   ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '(${monAns.length})',
+                                  style: TextStyle(color: Colors.grey.shade500),
                                 ),
                               ],
                             ),
                           ),
-                          // Grid món ăn
                           GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -542,49 +461,24 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildEMenuCategoryChip(String label, String? value) {
-    final isSelected = _selectedEMenuCategory == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedEMenuCategory = selected ? value : null;
-        });
-      },
-      selectedColor: Colors.deepPurple.shade600,
-      checkmarkColor: Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.grey.shade700,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? Colors.deepPurple.shade700 : Colors.grey.shade300,
-          width: isSelected ? 0 : 1,
-        ),
-      ),
-    );
-  }
-
   Widget _buildAllMonView() {
     return Column(
       children: [
-        // Search và Sort
-        Padding(
+        Container(
           padding: const EdgeInsets.all(16),
+          color: Colors.white,
           child: Column(
             children: [
               TextField(
                 controller: _searchController,
+                style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
-                  hintText: 'Tìm kiếm món ăn, mô tả, danh mục...',
-                  prefixIcon: Icon(Icons.search, color: Colors.deepPurple.shade700),
+                  hintText: 'Tìm kiếm món ăn...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.search, color: _wineRed),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.clear, color: Colors.grey.shade600),
+                          icon: const Icon(Icons.clear, color: Colors.grey),
                           onPressed: () {
                             setState(() {
                               _searchController.clear();
@@ -594,20 +488,17 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                           },
                         )
                       : null,
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.deepPurple.shade700, width: 2),
+                    borderSide: BorderSide(color: _wineRed.withOpacity(0.5), width: 1),
                   ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -616,77 +507,72 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                   });
                 },
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _sortBy,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.sort, color: Colors.deepPurple.shade700),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.deepPurple.shade700, width: 2),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      dropdownColor: Colors.white,
-                      style: TextStyle(color: Colors.grey.shade800),
-                      items: const [
-                        DropdownMenuItem(value: 'name', child: Text('Sắp xếp: Tên A-Z')),
-                        DropdownMenuItem(value: 'price-asc', child: Text('Giá: Thấp → Cao')),
-                        DropdownMenuItem(value: 'price-desc', child: Text('Giá: Cao → Thấp')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _sortBy = value ?? 'name';
-                          _currentPage = 1;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
               
-              // Filter tags
               if (_searchQuery.isNotEmpty || _selectedCategory != null) ...[
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                Row(
                   children: [
-                    if (_searchQuery.isNotEmpty)
-                      Chip(
-                        label: Text('Tìm: "$_searchQuery"'),
-                        onDeleted: () {
-                          setState(() {
-                            _searchController.clear();
-                            _searchQuery = '';
-                            _currentPage = 1;
-                          });
-                        },
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          if (_searchQuery.isNotEmpty)
+                            Chip(
+                              label: Text('Tìm: "$_searchQuery"'),
+                              backgroundColor: _wineRed.withOpacity(0.1),
+                              labelStyle: TextStyle(color: _wineRed, fontSize: 12),
+                              deleteIconColor: _wineRed,
+                              onDeleted: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                  _currentPage = 1;
+                                });
+                              },
+                            ),
+                          if (_selectedCategory != null)
+                             Chip(
+                              label: Text('Mục: $_selectedCategory'),
+                              backgroundColor: _wineRed.withOpacity(0.1),
+                              labelStyle: TextStyle(color: _wineRed, fontSize: 12),
+                              deleteIconColor: _wineRed,
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedCategory = null;
+                                  _currentPage = 1;
+                                });
+                              },
+                            ),
+                        ],
                       ),
-                    if (_selectedCategory != null)
-                      Chip(
-                        label: Text('Danh mục: $_selectedCategory'),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                        onDeleted: () {
-                          setState(() {
-                            _selectedCategory = null;
-                            _currentPage = 1;
-                          });
-                        },
+                    ),
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _sortBy,
+                          icon: Icon(Icons.sort, color: _wineRed, size: 20),
+                          style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
+                          items: const [
+                            DropdownMenuItem(value: 'name', child: Text('Tên A-Z')),
+                            DropdownMenuItem(value: 'price-asc', child: Text('Giá tăng')),
+                            DropdownMenuItem(value: 'price-desc', child: Text('Giá giảm')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _sortBy = value ?? 'name';
+                              _currentPage = 1;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -694,30 +580,32 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
           ),
         ),
         
-        // Category filters
         if (_categories.isNotEmpty)
           Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            ),
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildCategoryChip('Tất cả', null),
+                _buildFilterChip('Tất cả', null, isEMenu: false),
                 const SizedBox(width: 8),
                 ..._categories.map((cat) => Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: _buildCategoryChip(cat, cat),
+                  child: _buildFilterChip(cat, cat, isEMenu: false),
                 )),
               ],
             ),
           ),
         
-        // Grid món ăn
         Expanded(
           child: _loadingAllMon
               ? _buildShimmerGrid()
               : _filteredMonAns.isEmpty
-                  ? _buildEmptyState()
+                  ? _buildEmptyState('Không tìm thấy món ăn')
                   : Column(
                       children: [
                         Expanded(
@@ -731,24 +619,11 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                             ),
                             itemCount: _paginatedMonAns.length,
                             itemBuilder: (context, index) {
-                              final monAn = _paginatedMonAns[index];
-                              return _buildMonAnCard(monAn, index);
+                              return _buildMonAnCard(_paginatedMonAns[index], index);
                             },
                           ),
                         ),
-                        
-                        // Pagination
                         if (_totalPages > 1) _buildPagination(),
-                        
-                        // Info
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'Hiển thị ${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage * _itemsPerPage).clamp(0, _filteredMonAns.length)} trong tổng số ${_filteredMonAns.length} món',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
                       ],
                     ),
         ),
@@ -756,30 +631,45 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildCategoryChip(String label, String? value) {
-    final isSelected = _selectedCategory == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedCategory = selected ? value : null;
-          _currentPage = 1;
-        });
-      },
-      selectedColor: Colors.deepPurple.shade700,
-      checkmarkColor: Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.grey[700],
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        fontSize: 13,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(
+  Widget _buildFilterChip(String label, String? value, {required bool isEMenu}) {
+    final currentSelected = isEMenu ? _selectedEMenuCategory : _selectedCategory;
+    final isSelected = currentSelected == value;
+    
+    return Center(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            if (isEMenu) {
+              _selectedEMenuCategory = isSelected ? null : value;
+            } else {
+              _selectedCategory = isSelected ? null : value;
+              _currentPage = 1;
+            }
+          });
+        },
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? Colors.deepPurple.shade700 : Colors.grey.shade300,
-          width: isSelected ? 0 : 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? _wineRed : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? _wineRed : Colors.grey.shade300,
+              width: 1,
+            ),
+            boxShadow: isSelected
+              ? [BoxShadow(color: _wineRed.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]
+              : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey.shade700,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              fontSize: 13,
+            ),
+          ),
         ),
       ),
     );
@@ -792,80 +682,51 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
             : '${ApiConstants.imageBaseUrl}${menu.hinhAnh!.startsWith('/') ? '' : '/'}${menu.hinhAnh}')
         : null;
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: InkWell(
-        onTap: () => _showMenuDetail(menu),
-        borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTap: () => _showMenuDetail(menu),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image
             Expanded(
-              flex: 3,
+              flex: 5,
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     child: imageUrl != null
-                        ? SizedBox.expand(
-                            child: Image.network(
-                              imageUrl,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.deepPurple.shade100,
-                                        Colors.deepPurple.shade50,
-                                      ],
-                                    ),
-                                  ),
-                                  child: Icon(Icons.restaurant_menu, size: 50, color: Colors.deepPurple.shade700),
-                                );
-                              },
-                            ),
-                          )
-                        : Container(
+                        ? Image.network(
+                            imageUrl,
                             width: double.infinity,
                             height: double.infinity,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.deepPurple.shade100,
-                                  Colors.deepPurple.shade50,
-                                ],
-                              ),
-                            ),
-                            child: Icon(Icons.restaurant_menu, size: 50, color: Colors.deepPurple.shade700),
-                          ),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
+                          )
+                        : _buildPlaceholderImage(),
                   ),
-                  // Badge giảm giá
                   if (menu.phanTramGiamGia != null && menu.phanTramGiamGia! > 0)
                     Positioned(
-                      top: 8,
-                      right: 8,
+                      top: 0,
+                      right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.red.shade600, Colors.red.shade400],
+                          color: _wineRed,
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(16),
+                            bottomLeft: Radius.circular(12),
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
                         child: Text(
                           '-${menu.phanTramGiamGia!.toStringAsFixed(0)}%',
@@ -880,158 +741,73 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                 ],
               ),
             ),
-            // Content
             Expanded(
-              flex: 2,
-              child: Container(
-                padding: const EdgeInsets.all(5),
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Phần trên: Tên và loại menu
-                    Flexible(
-                      flex: 1,
-                      fit: FlexFit.loose,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  menu.tenMenu,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.1,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (menu.loaiMenu != null && menu.loaiMenu!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.deepPurple.shade100,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      menu.loaiMenu!,
-                                      style: TextStyle(
-                                        fontSize: 8,
-                                        color: Colors.deepPurple.shade700,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 1),
-                          // Số món trong menu
-                          if (menu.chiTietMenus != null && menu.chiTietMenus!.isNotEmpty)
-                            Text(
-                              '${menu.chiTietMenus!.length} món',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey.shade600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          else
-                            Text(
-                              'Combo',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey.shade600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                    // Phần dưới: Giá
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Giá gốc và phần trăm giảm giá (nếu có)
-                        if (menu.giaGoc != null && menu.giaGoc! > 0 && menu.giaMenu != null && menu.giaGoc! > menu.giaMenu!)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    '${NumberFormat("#,###").format(menu.giaGoc!.toInt())} đ',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                        Text(
+                          menu.tenMenu,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          menu.chiTietMenus != null 
+                              ? '${menu.chiTietMenus!.length} món' 
+                              : 'Combo',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (menu.giaGoc != null && menu.giaGoc! > menu.giaMenu!)
+                                Text(
+                                  '${NumberFormat("#,###").format(menu.giaGoc!.toInt())} đ',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    decoration: TextDecoration.lineThrough,
+                                    color: Colors.grey.shade400
                                   ),
                                 ),
-                                if (menu.phanTramGiamGia != null && menu.phanTramGiamGia! > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.shade50,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        '-${menu.phanTramGiamGia!.toStringAsFixed(0)}%',
-                                        style: TextStyle(
-                                          fontSize: 8,
-                                          color: Colors.red.shade700,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                              Text(
+                                '${NumberFormat("#,###").format(menu.giaMenu!.toInt())} đ',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: _wineRed,
+                                ),
+                              ),
+                            ],
                           ),
-                        // Giá hiện tại
-                        if (menu.giaMenu != null && menu.giaMenu! > 0)
-                          Text(
-                            '${NumberFormat("#,###").format(menu.giaMenu!.toInt())} đ',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple.shade700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        else
-                          Text(
-                            'Liên hệ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: _wineRed.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
+                          child: Icon(Icons.add, size: 18, color: _wineRed),
+                        ),
                       ],
                     ),
                   ],
@@ -1040,10 +816,8 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
             ),
           ],
         ),
-      ),
-    ).animate()
-        .fadeIn(delay: (index * 100).ms, duration: 400.ms)
-        .scale(begin: const Offset(0.9, 0.9));
+      ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.95, 0.95)),
+    );
   }
 
   Widget _buildMonAnCard(MonAn monAn, int index) {
@@ -1051,176 +825,92 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         ? '${ApiConstants.imageBaseUrl}/${monAn.hinhAnhMonAns.first.urlHinhAnh}'
         : null;
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: InkWell(
-        onTap: () => _showMonAnDetail(monAn),
-        borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTap: () => _showMonAnDetail(monAn),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              flex: 3,
+              flex: 5,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: imageUrl != null
-                    ? SizedBox.expand(
-                        child: Image.network(
-                          imageUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.deepPurple.shade100,
-                                    Colors.deepPurple.shade50,
-                                  ],
-                                ),
-                              ),
-                              child: Icon(Icons.restaurant_menu, size: 50, color: Colors.deepPurple.shade700),
-                            );
-                          },
-                        ),
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
                       )
-                    : Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.deepPurple.shade100,
-                              Colors.deepPurple.shade50,
-                            ],
-                          ),
-                        ),
-                        child: Icon(Icons.restaurant_menu, size: 50, color: Colors.deepPurple.shade700),
-                      ),
+                    : _buildPlaceholderImage(),
               ),
             ),
             Expanded(
-              flex: 2,
-              child: Container(
+              flex: 4,
+              child: Padding(
                 padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Phần trên: Tên món ăn
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           monAn.tenMonAn,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             height: 1.2,
+                            color: Colors.black87,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        // Hiển thị danh mục nếu có
-                        if (monAn.tenDanhMuc != null && monAn.tenDanhMuc!.isNotEmpty)
-                          Text(
-                            monAn.tenDanhMuc!,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        else
-                          Text(
-                            _getTenDanhMuc(monAn.maDanhMuc),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        // Hiển thị các phiên bản (size) nếu có
-                        if (monAn.phienBanMonAns.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            monAn.phienBanMonAns.length == 1
-                                ? '${monAn.phienBanMonAns.first.tenPhienBan}'
-                                : '${monAn.phienBanMonAns.length} size',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.deepPurple.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                        Text(
+                          monAn.tenDanhMuc ?? _getTenDanhMuc(monAn.maDanhMuc),
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
-                    // Phần dưới: Giá
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // Hiển thị giá từ phiên bản hoặc giá mặc định
                         if (monAn.phienBanMonAns.isNotEmpty)
-                          // Nếu có nhiều phiên bản, hiển thị khoảng giá
-                          monAn.phienBanMonAns.length > 1
-                              ? Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${NumberFormat("#,###").format(monAn.phienBanMonAns.map((pb) => pb.gia).reduce((a, b) => a < b ? a : b).toInt())} đ',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.deepPurple.shade700,
-                                      ),
-                                    ),
-                                    Text(
-                                      '- ${NumberFormat("#,###").format(monAn.phienBanMonAns.map((pb) => pb.gia).reduce((a, b) => a > b ? a : b).toInt())} đ',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              // Nếu chỉ có 1 phiên bản, hiển thị giá của nó
-                              : Text(
-                                  '${NumberFormat("#,###").format(monAn.phienBanMonAns.first.gia.toInt())} đ',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.deepPurple.shade700,
-                                  ),
-                                )
+                          Expanded(
+                            child: Text(
+                              'Từ ${NumberFormat("#,###").format(monAn.phienBanMonAns.first.gia.toInt())} đ',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _wineRed),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )
                         else if (monAn.gia > 0)
                           Text(
                             '${NumberFormat("#,###").format(monAn.gia.toInt())} đ',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple.shade700,
-                            ),
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _wineRed),
                           )
                         else
                           Text(
                             'Liên hệ',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade600,
-                            ),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _wineRed),
                           ),
+                        if (monAn.gia > 0 || monAn.phienBanMonAns.isNotEmpty)
+                          Icon(Icons.add_circle, color: _wineRed, size: 24),
                       ],
                     ),
                   ],
@@ -1229,10 +919,33 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
             ),
           ],
         ),
+      ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.95, 0.95)),
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      color: Colors.grey.shade100,
+      child: Center(
+        child: Icon(Icons.restaurant, color: Colors.grey.shade300, size: 40),
       ),
-    ).animate()
-        .fadeIn(delay: (index * 50).ms, duration: 300.ms)
-        .scale(begin: const Offset(0.9, 0.9));
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.no_meals, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildShimmerGrid() {
@@ -1242,7 +955,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.75,
+        childAspectRatio: 0.72,
       ),
       itemCount: 6,
       itemBuilder: (context, index) {
@@ -1254,116 +967,9 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Container(color: Colors.grey[300]),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 14,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 12,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _searchQuery.isNotEmpty || _selectedCategory != null
-                      ? Icons.search_off
-                      : Icons.restaurant_menu_outlined,
-                  size: 64,
-                  color: Colors.grey.shade400,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                _searchQuery.isNotEmpty
-                    ? 'Không tìm thấy món nào'
-                    : _selectedCategory != null
-                        ? 'Chưa có món nào trong danh mục này'
-                        : 'Chưa có món nào trong thực đơn',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              if (_searchQuery.isNotEmpty)
-                Text(
-                  'Thử tìm kiếm với từ khóa khác',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                  ),
-                  textAlign: TextAlign.center,
-                )
-              else if (_selectedCategory != null)
-                Text(
-                  'Vui lòng chọn danh mục khác',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                  ),
-                  textAlign: TextAlign.center,
-                )
-              else
-                Text(
-                  'Vui lòng thử lại sau',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -1374,49 +980,30 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            onPressed: _currentPage > 1
-                ? () => setState(() => _currentPage--)
-                : null,
-            icon: const Icon(Icons.chevron_left),
+            onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
+            icon: Icon(Icons.chevron_left, color: _currentPage > 1 ? _wineRed : Colors.grey),
           ),
-          ...List.generate(_totalPages, (index) {
-            final page = index + 1;
-            if (page == 1 ||
-                page == _totalPages ||
-                (page >= _currentPage - 1 && page <= _currentPage + 1)) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _currentPage = page),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _currentPage == page
-                        ? Colors.indigo.shade600
-                        : Colors.grey.shade200,
-                    foregroundColor: _currentPage == page ? Colors.white : Colors.black87,
-                    minimumSize: const Size(40, 40),
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: Text('$page'),
-                ),
-              );
-            } else if (page == _currentPage - 2 || page == _currentPage + 2) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text('...', style: TextStyle(color: Colors.grey)),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _wineRed.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$_currentPage / $_totalPages',
+              style: TextStyle(fontWeight: FontWeight.bold, color: _wineRed),
+            ),
+          ),
           IconButton(
-            onPressed: _currentPage < _totalPages
-                ? () => setState(() => _currentPage++)
-                : null,
-            icon: const Icon(Icons.chevron_right),
+            onPressed: _currentPage < _totalPages ? () => setState(() => _currentPage++) : null,
+            icon: Icon(Icons.chevron_right, color: _currentPage < _totalPages ? _wineRed : Colors.grey),
           ),
         ],
       ),
     );
   }
+
+  // --- DETAIL MODALS (BOTTOM SHEETS) ---
 
   void _showMenuDetail(Menu menu) {
     showModalBottomSheet(
@@ -1424,246 +1011,156 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.9,
+        height: MediaQuery.of(context).size.height * 0.85,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            // Detail Header Image
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  child: menu.hinhAnh != null
+                      ? Image.network(
+                          menu.hinhAnh!.startsWith('http')
+                              ? menu.hinhAnh!
+                              : '${ApiConstants.imageBaseUrl}${menu.hinhAnh!.startsWith('/') ? '' : '/'}${menu.hinhAnh}',
+                          height: 250,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_,__,___) => Container(height: 250, color: Colors.grey.shade200),
+                        )
+                      : Container(height: 250, color: Colors.grey.shade200),
+                ),
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            // Info Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      menu.tenMenu,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.2),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
                       children: [
                         Text(
-                          menu.tenMenu,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          '${NumberFormat("#,###").format(menu.giaMenu!.toInt())} đ',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _wineRed),
                         ),
-                        if (menu.loaiMenu != null)
+                        if (menu.giaGoc != null && menu.giaGoc! > menu.giaMenu!)
                           Padding(
-                            padding: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.only(left: 12),
                             child: Text(
-                              menu.loaiMenu!,
+                              '${NumberFormat("#,###").format(menu.giaGoc!.toInt())} đ',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
+                                fontSize: 16,
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey.shade400
                               ),
                             ),
                           ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image
-                    if (menu.hinhAnh != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          menu.hinhAnh!.startsWith('http')
-                              ? menu.hinhAnh!
-                              : '${ApiConstants.imageBaseUrl}${menu.hinhAnh!.startsWith('/') ? '' : '/'}${menu.hinhAnh}',
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 200,
-                              color: Colors.grey.shade200,
-                              child: const Icon(Icons.restaurant_menu, size: 64),
-                            );
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     
-                    // Price
-                    if (menu.giaMenu != null) ...[
-                      const Text(
-                        'Giá',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    if (menu.moTa != null && menu.moTa!.isNotEmpty) ...[
+                      const Text('Mô tả', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
+                      Text(menu.moTa!, style: TextStyle(color: Colors.grey.shade700, height: 1.5)),
+                      const SizedBox(height: 24),
+                    ],
+                    
+                    if (menu.chiTietMenus != null && menu.chiTietMenus!.isNotEmpty) ...[
                       Row(
                         children: [
+                          Icon(Icons.restaurant_menu, color: _wineRed, size: 20),
+                          const SizedBox(width: 8),
                           Text(
-                            '${NumberFormat("#,###").format(menu.giaMenu!.toInt())} đ',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo.shade600,
-                            ),
+                            'Chi tiết (${menu.chiTietMenus!.length} món)',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                          if (menu.giaGoc != null && menu.giaGoc! > menu.giaMenu!) ...[
-                            const SizedBox(width: 16),
-                            Text(
-                              NumberFormat("#,###").format(menu.giaGoc!.toInt()),
-                              style: TextStyle(
-                                fontSize: 18,
-                                decoration: TextDecoration.lineThrough,
-                                color: Colors.grey.shade400,
-                              ),
-                            ),
-                            if (menu.phanTramGiamGia != null && menu.phanTramGiamGia! > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'Giảm ${menu.phanTramGiamGia!.toStringAsFixed(0)}%',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.red.shade700,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
                         ],
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                    
-                    // Description
-                    if (menu.moTa != null && menu.moTa!.isNotEmpty) ...[
-                      const Text(
-                        'Mô tả',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        menu.moTa!,
-                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    
-                    // Chi tiết món
-                    if (menu.chiTietMenus != null && menu.chiTietMenus!.isNotEmpty) ...[
-                      Text(
-                        'Danh sách món (${menu.chiTietMenus!.length})',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...menu.chiTietMenus!.map((ct) {
-                        final imageUrl = ct.monAn?.hinhAnh != null
-                            ? (ct.monAn!.hinhAnh!.startsWith('http')
-                                ? ct.monAn!.hinhAnh!
-                                : '${ApiConstants.imageBaseUrl}${ct.monAn!.hinhAnh!.startsWith('/') ? '' : '/'}${ct.monAn!.hinhAnh}')
-                            : null;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              if (imageUrl != null)
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    imageUrl,
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        width: 64,
-                                        height: 64,
-                                        color: Colors.grey.shade200,
-                                        child: const Icon(Icons.restaurant_menu),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              if (imageUrl != null) const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      ct.monAn?.tenMonAn ?? 'N/A',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (ct.ghiChu != null && ct.ghiChu!.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          ct.ghiChu!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                      const SizedBox(height: 16),
+                      ...menu.chiTietMenus!.map((ct) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle, size: 16, color: _wineRed),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                ct.monAn?.tenMonAn ?? 'Món ăn',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                               ),
-                              if (ct.monAn?.gia != null)
-                                Text(
-                                  '${NumberFormat("#,###").format(ct.monAn!.gia!.toInt())} đ',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.indigo.shade600,
-                                  ),
-                                ),
-                              if (ct.soLuong != null && ct.soLuong! > 1)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Text(
-                                    'x${ct.soLuong}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text('x${ct.soLuong}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      )),
                     ],
+                  ],
+                ),
+              ),
+            ),
+            
+            // Add to Cart Button
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  // TODO: Add cart logic here
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _wineRed,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_shopping_cart),
+                    SizedBox(width: 8),
+                    Text('Thêm vào giỏ hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -1684,68 +1181,85 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.75,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+            if (imageUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                child: Image.network(
+                  imageUrl,
+                  height: 250,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_,__,___) => Container(height: 250, color: Colors.grey.shade200),
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      monAn.tenMonAn,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
+              
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (imageUrl != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          imageUrl,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 200,
-                              color: Colors.grey.shade200,
-                              child: const Icon(Icons.restaurant_menu, size: 64),
-                            );
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 16),
                     Text(
-                      'Giá: ${NumberFormat("#,###").format(monAn.gia)} đ',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo.shade600,
-                      ),
+                      monAn.tenMonAn,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
+                    const SizedBox(height: 8),
+                    
+                    if (monAn.phienBanMonAns.isNotEmpty)
+                       Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Text(
+                            '${NumberFormat("#,###").format(monAn.phienBanMonAns.first.gia.toInt())} đ',
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _wineRed),
+                           ),
+                           const SizedBox(height: 4),
+                           Text('Giá thay đổi tùy size', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                         ],
+                       )
+                    else
+                      Text(
+                        '${NumberFormat("#,###").format(monAn.gia.toInt())} đ',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _wineRed),
+                      ),
+                      
+                  ],
+                ),
+              ),
+            ),
+            
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                   // TODO: Add logic select details
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _wineRed,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.restaurant),
+                    SizedBox(width: 8),
+                    Text('Chọn món', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
