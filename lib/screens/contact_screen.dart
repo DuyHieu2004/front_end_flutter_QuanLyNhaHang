@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class ContactScreen extends StatefulWidget {
+  const ContactScreen({super.key});
+
   @override
   _ContactScreenState createState() => _ContactScreenState();
 }
@@ -14,6 +17,11 @@ class _ContactScreenState extends State<ContactScreen> {
   final _messageController = TextEditingController();
   bool _isSubmitting = false;
 
+  // --- COLOR PALETTE ---
+  final Color _wineRed = const Color(0xFF800020);
+  final Color _lightWine = const Color(0xFFA52A2A);
+  final Color _bgWhite = const Color(0xFFFAFAFA);
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -22,6 +30,8 @@ class _ContactScreenState extends State<ContactScreen> {
     _messageController.dispose();
     super.dispose();
   }
+
+  // --- LOGIC (GIỮ NGUYÊN) ---
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) {
@@ -37,9 +47,17 @@ class _ContactScreenState extends State<ContactScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Đã gửi yêu cầu! Chúng tôi sẽ liên hệ lại trong vòng 24 giờ làm việc."),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text("Đã gửi yêu cầu! Chúng tôi sẽ liên hệ sớm.")),
+            ],
+          ),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
 
@@ -86,6 +104,7 @@ class _ContactScreenState extends State<ContactScreen> {
 
   Future<void> _openMap() async {
     const address = "140 Lê Trọng Tấn, Q. Tân Phú, TP.HCM";
+    // Fix: Correct Google Maps URL format
     final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
     try {
       if (await canLaunchUrl(uri)) {
@@ -96,12 +115,26 @@ class _ContactScreenState extends State<ContactScreen> {
     }
   }
 
+  // --- UI BUILDER ---
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bgWhite,
       appBar: AppBar(
-        title: const Text("Liên hệ"),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.white,
+        title: Text(
+          "LIÊN HỆ",
+          style: TextStyle(
+            color: _wineRed,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.0,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        iconTheme: IconThemeData(color: _wineRed),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -109,53 +142,7 @@ class _ContactScreenState extends State<ContactScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header Section
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.deepPurple.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "KẾT NỐI VỚI VIET RESTAURANT",
-                    style: TextStyle(
-                      fontSize: 11,
-                      letterSpacing: 3,
-                      color: Colors.deepPurple.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Chúng tôi luôn lắng nghe mọi phản hồi từ bạn",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "Dù bạn muốn đặt tiệc riêng, hợp tác sự kiện hay đơn giản là góp ý về dịch vụ, đội ngũ CSKH sẽ phản hồi trong vòng 24 giờ làm việc.",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeaderSection(),
             const SizedBox(height: 24),
 
             // Contact Info Cards
@@ -165,293 +152,120 @@ class _ContactScreenState extends State<ContactScreen> {
                   child: _buildContactCard(
                     "Hotline & Zalo",
                     "1900 1234",
-                    "Hoạt động 9:00 - 22:00 hằng ngày",
-                    Icons.phone,
+                    "9:00 - 22:00 hằng ngày",
+                    Icons.phone_in_talk,
                     () => _callPhone("19001234"),
+                    0,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildContactCard(
-                    "Email",
-                    "hello@vietrestaurant.vn",
-                    "Ưu tiên gửi file thiết kế sự kiện",
-                    Icons.email,
+                    "Email Hỗ Trợ",
+                    "hello@viet.vn",
+                    "Phản hồi trong 24h",
+                    Icons.mark_email_unread,
                     () => _sendEmail("hello@vietrestaurant.vn"),
+                    1,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
             // Location & Hours
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Thông tin liên hệ trực tiếp",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoBox(
-                            "Nhà hàng flagship",
-                            "140 Lê Trọng Tấn, Q. Tân Phú, TP.HCM",
-                            "Khu vực Tân Phú, gần Aeon Mall · thuận tiện gửi xe.",
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildInfoBox(
-                            "Giờ hoạt động",
-                            "10:30 - 22:30",
-                            "Bếp nhận order cuối 21:45 · Mở cửa tất cả ngày lễ.",
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          children: [
-                            // Map placeholder với gradient đẹp hơn
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.blue.shade50,
-                                    Colors.green.shade50,
-                                  ],
-                                ),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.1),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        Icons.location_on,
-                                        size: 48,
-                                        color: Colors.deepPurple.shade700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: Text(
-                                        "140 Lê Trọng Tấn, Q. Tân Phú, TP.HCM",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey.shade800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Khu vực Tân Phú, gần Aeon Mall",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // Nút mở Google Maps
-                            Positioned(
-                              bottom: 12,
-                              right: 12,
-                              left: 12,
-                              child: ElevatedButton.icon(
-                                onPressed: _openMap,
-                                icon: const Icon(Icons.map, size: 18),
-                                label: const Text("Mở trên Google Maps"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.deepPurple,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  elevation: 4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+            _buildSectionTitle("Địa điểm & Giờ mở cửa"),
+            const SizedBox(height: 16),
+            _buildLocationSection(),
+            const SizedBox(height: 32),
 
             // Contact Form
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Gửi thông tin cho chúng tôi",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Điền form bên dưới, chúng tôi sẽ gọi lại trong vòng 24 giờ.",
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: "Họ và tên *",
-                          prefixIcon: const Icon(Icons.person),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? "Vui lòng nhập họ tên" : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: "Email liên hệ *",
-                          prefixIcon: const Icon(Icons.email),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value?.isEmpty ?? true) {
-                            return "Vui lòng nhập email";
-                          }
-                          if (!value!.contains('@')) {
-                            return "Email không hợp lệ";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _topicController,
-                        decoration: InputDecoration(
-                          labelText: "Chủ đề / Dịp đặc biệt",
-                          prefixIcon: const Icon(Icons.event),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          hintText: "Tiệc sinh nhật 10 người, cần không gian riêng...",
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          labelText: "Nội dung *",
-                          prefixIcon: const Icon(Icons.message),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          hintText: "Chia sẻ mong muốn của bạn...",
-                        ),
-                        maxLines: 5,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? "Vui lòng nhập nội dung" : null,
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : _handleSubmit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  "Gửi yêu cầu hỗ trợ",
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        "*Thông tin của bạn được bảo mật theo chính sách quyền riêng tư của Viet Restaurant.",
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+            _buildSectionTitle("Gửi tin nhắn"),
+            const SizedBox(height: 16),
+            _buildContactForm(),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Row(
+      children: [
+        Container(width: 4, height: 24, decoration: BoxDecoration(color: _wineRed, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 12),
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: _wineRed,
+            letterSpacing: 1.0,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeaderSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_wineRed, _lightWine],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: _wineRed.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+                child: const Icon(Icons.support_agent, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                "KẾT NỐI VỚI CHÚNG TÔI",
+                style: TextStyle(
+                  fontSize: 12,
+                  letterSpacing: 2,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "Chúng tôi luôn lắng nghe mọi phản hồi từ bạn.",
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.3,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            "Dù bạn muốn đặt tiệc riêng, hợp tác sự kiện hay góp ý dịch vụ, đội ngũ CSKH sẽ hỗ trợ ngay lập tức.",
+            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
   }
 
   Widget _buildContactCard(
@@ -460,97 +274,279 @@ class _ContactScreenState extends State<ContactScreen> {
     String subtitle,
     IconData icon,
     VoidCallback onTap,
+    int index,
   ) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.deepPurple.shade700, size: 28),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _wineRed.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: _wineRed, size: 24),
+            ),
+            const SizedBox(height: 16),
             Text(
               title,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
+                color: Colors.grey.shade600,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               value,
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple.shade700,
+                fontSize: 16, // Giảm font size một chút để không bị tràn
+                fontWeight: FontWeight.w800,
+                color: _wineRed,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade600,
+                color: Colors.grey.shade500,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(delay: (index * 100).ms).scale();
   }
 
-  Widget _buildInfoBox(String label, String title, String subtitle) {
+  Widget _buildLocationSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              letterSpacing: 2,
-              color: Colors.grey.shade600,
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoRow(Icons.store, "NHÀ HÀNG FLAGSHIP", "140 Lê Trọng Tấn, Tân Phú, TP.HCM"),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(Icons.access_time_filled, "GIỜ HOẠT ĐỘNG", "10:30 - 22:30 (Nhận order cuối 21:45)"),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+          // Map Placeholder Area
+          Stack(
+            children: [
+              Container(
+                height: 180,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  image: const DecorationImage(
+                    // Sử dụng ảnh map giả lập hoặc gradient
+                    image: NetworkImage("https://mt0.google.com/vt/lyrs=m&x=0&y=0&z=15"), // Placeholder
+                    fit: BoxFit.cover,
+                    opacity: 0.6,
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.white, Colors.grey.shade100],
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.location_on, size: 40, color: _wineRed),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Xem trên Google Maps",
+                        style: TextStyle(color: _wineRed, fontWeight: FontWeight.bold),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openMap,
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    ).animate().fadeIn().slideX();
+  }
+
+  Widget _buildInfoRow(IconData icon, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey.shade400),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: Colors.black54),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactForm() {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Điền thông tin bên dưới, chúng tôi sẽ phản hồi trong 24h.",
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+              _buildTextField(controller: _nameController, label: "Họ và tên", icon: Icons.person_outline, required: true),
+              const SizedBox(height: 16),
+              _buildTextField(controller: _emailController, label: "Email liên hệ", icon: Icons.email_outlined, required: true, isEmail: true),
+              const SizedBox(height: 16),
+              _buildTextField(controller: _topicController, label: "Chủ đề / Dịp đặc biệt", icon: Icons.celebration_outlined),
+              const SizedBox(height: 16),
+              _buildTextField(controller: _messageController, label: "Nội dung lời nhắn", icon: Icons.chat_bubble_outline, maxLines: 4, required: true),
+              
+              const SizedBox(height: 24),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _handleSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _wineRed,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 5,
+                    shadowColor: _wineRed.withOpacity(0.4),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text(
+                          "GỬI YÊU CẦU",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn().slideX();
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+    bool required = false,
+    bool isEmail = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: required ? "$label *" : label,
+        labelStyle: TextStyle(color: Colors.grey.shade600),
+        prefixIcon: Icon(icon, color: _wineRed.withOpacity(0.7)),
+        alignLabelWithHint: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: _wineRed, width: 2),
+        ),
+        filled: true,
+        fillColor: _bgWhite,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      ),
+      validator: (value) {
+        if (required && (value == null || value.isEmpty)) {
+          return "Vui lòng nhập $label";
+        }
+        if (isEmail && value != null && value.isNotEmpty && !value.contains('@')) {
+          return "Email không hợp lệ";
+        }
+        return null;
+      },
     );
   }
 }
-
