@@ -79,19 +79,15 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ### Installation Steps
 
-  ```bash
-  adb devices
-  ```
+**Transfer ip to localhost**
+
+Connect via USB and run this command to map localhost to the mobile device (reverse tcp).
 
   ```bash
-      List of devices attached
-    emulator-5554   device
-    8493x0202       device
+  adb reverse tcp:5555 tcp:5555
   ```
 
-  ```
-  adb -s 8493x0202 reverse tcp:5555 tcp:5555
-  ```
+
 1.  **Clone the repository**
     ```bash
     git clone [https://github.com/DuyHieu2004/Mobile_QuanLyNhaHang.git](https://github.com/DuyHieu2004/Mobile_QuanLyNhaHang.git)
