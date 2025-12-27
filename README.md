@@ -79,6 +79,19 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ### Installation Steps
 
+  ```bash
+  adb devices
+  ```
+
+  ```bash
+      List of devices attached
+    emulator-5554   device
+    8493x0202       device
+  ```
+
+  ```
+  adb -s 8493x0202 reverse tcp:5555 tcp:5555
+  ```
 1.  **Clone the repository**
     ```bash
     git clone [https://github.com/DuyHieu2004/Mobile_QuanLyNhaHang.git](https://github.com/DuyHieu2004/Mobile_QuanLyNhaHang.git)
@@ -102,7 +115,30 @@ Follow these instructions to get a copy of the project up and running on your lo
     ```bash
     flutter run
     ```
+### 3. Configure Physical Device Connection with Backend (Important ⚠️)
+By default, Android devices cannot resolve `localhost` as your computer. To allow the app on your phone to call the API running on your computer (e.g., at port **5555**), you need to perform **Port Forwarding**.
 
+**Step 3.1: Check Connected Devices**
+Ensure **USB Debugging** is enabled on your phone and it is connected to the computer. Check the device ID by running:
+
+```bash
+adb devices
+```
+You should see your device listed, e.g.:
+
+```bash
+    List of devices attached
+  emulator-5554   device
+  8493x0202       device
+```
+
+**Step 3.2: Set Up Port Forwarding**
+Run the following command, replacing `YOUR_DEVICE_ID` with your actual device ID from the previous
+step:
+
+```bash
+adb -s YOUR_DEVICE_ID reverse tcp:5555 tcp:5555
+```
 ---
 
 ## 📂 Project Structure
