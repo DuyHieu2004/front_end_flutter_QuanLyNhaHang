@@ -42,16 +42,19 @@ class BanAnService {
     try {
       // In ra để kiểm tra xem giờ gửi đi là giờ gì
       print("--- DEBUG fetchAvailableTables ---");
-      print("Time gửi đi: ${selectedTime.toIso8601String()}");
+      print("Time gửi đi (UTC): ${selectedTime.toUtc().toIso8601String()}");
       print("Số người: $soNguoi");
 
-      // Sử dụng GetStatusByTime như web khách hàng (không truyền maKhachHang trong query)
-      // Backend sẽ tự xác định bàn "Của tôi" từ token nếu có
-      final dateTimeStr = selectedTime.toIso8601String();
-      var uri = Uri.parse('$_baseUrl/BanAnsAPI/GetStatusByTime').replace(queryParameters: {
+      // Sử dụng GetStatusByTime, thêm maKhachHang để backend trả về trạng thái "CuaTui"
+      final dateTimeStr = selectedTime.toUtc().toIso8601String();
+      final queryParams = {
         'dateTime': dateTimeStr,
         'soNguoi': soNguoi.toString(),
-      });
+      };
+      if (maKhachHang.isNotEmpty) {
+        queryParams['maKhachHang'] = maKhachHang;
+      }
+      var uri = Uri.parse('$_baseUrl/BanAnsAPI/GetStatusByTime').replace(queryParameters: queryParams);
 
       print("URL: $uri");
 

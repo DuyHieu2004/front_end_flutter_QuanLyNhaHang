@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -25,15 +26,24 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   String _sortBy = 'name';
   String? _selectedCategory;
   
-  // Menu đang áp dụng
+  // Menu đang áp dụng (theo khung giờ hiện tại)
   List<Menu> _menusDangApDung = [];
   bool _loadingMenusDangApDung = false;
+  String? _tenKhungGio;
+  int _timeRemaining = 0;
+  bool _isNgayLe = false; // Thêm để hiển thị thông báo ngày lễ
+  
+  // Timers để tránh memory leak
+  Timer? _countdownTimer;
+  Timer? _refreshTimer;
   
   // Thực đơn điện tử - món ăn theo danh mục
   List<MonAn> _monAnsTheoDanhMuc = [];
   List<DanhMuc> _danhMucsEMenu = [];
   bool _loadingEMenu = false;
   String? _selectedEMenuCategory;
+  bool _hasFetchedMenuViewModel = false;
+  bool _hasInitializedMenuData = false;
   
   // Tất cả món
   List<MonAn> _allMonAns = [];
@@ -46,23 +56,128 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Khởi tạo dữ liệu sau khi build để tránh notifyListeners trong build
+    Future.microtask(_initMenuData);
+    
+    // Setup countdown timer
+    _startCountdownTimer();
+  }
+
+  Future<void> _initMenuData() async {
+    if (_hasInitializedMenuData) return;
+    _hasInitializedMenuData = true;
+
+    await _loadMenusDangApDung();
+    await _loadAllMonAns();
+    await _loadCategories();
+    await _loadEMenuData();
+  }
+
+  Future<void> _ensureMenuViewModelData() async {
+    if (_hasFetchedMenuViewModel) return;
+    final viewModel = Provider.of<MenuViewModel>(context, listen: false);
+    await viewModel.fetchInitialData();
+    _hasFetchedMenuViewModel = true;
+  }
+
+  void _startCountdownTimer() {
+    // Hủy timers cũ nếu có
+    _countdownTimer?.cancel();
+    _refreshTimer?.cancel();
+    
+    // Countdown timer mỗi giây
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _timeRemaining <= 0) {
+        timer.cancel();
+        if (_timeRemaining <= 0) {
+          // Reload menu khi hết thời gian
     _loadMenusDangApDung();
-    _loadAllMonAns();
-    _loadCategories();
-    _loadEMenuData();
+        }
+        return;
+      }
+      setState(() {
+        _timeRemaining--;
+      });
+    });
+    
+    // Refresh menu mỗi phút
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      _loadMenusDangApDung();
+    });
   }
 
   Future<void> _loadMenusDangApDung() async {
     setState(() => _loadingMenusDangApDung = true);
     try {
-      final menus = await _menuService.fetchMenusDangApDung();
+      // Dùng fetchMenuHienTai() để đồng bộ với React web
+      final response = await _menuService.fetchMenuHienTai();
+      
+      // DEBUG: Log raw response để troubleshoot
+      print('=== DEBUG: Menu API Response ===');
+      print('Response type: ${response.runtimeType}');
+      print('Response keys: ${response.keys}');
+      print('tenKhungGio: ${response['tenKhungGio']}');
+      print('isNgayLe: ${response['isNgayLe']}');
+      print('Data type: ${response['data']?.runtimeType}');
+      print('Data length: ${(response['data'] as List?)?.length ?? 0}');
+      
+      // Parse response giống React web - với error handling cho từng menu
+      final data = response['data'] ?? [];
+      final List<Menu> menus = [];
+      
+      // Parse từng menu với error handling
+      for (int i = 0; i < (data as List).length; i++) {
+        try {
+          final menuJson = data[i];
+          final menu = Menu.fromJson(menuJson);
+          menus.add(menu);
+        } catch (e) {
+          print('=== WARNING: Failed to parse menu at index $i ===');
+          print('Error: $e');
+          print('Menu JSON: ${data[i]}');
+          // Continue parsing other menus
+        }
+      }
+      
+      print('=== DEBUG: Parsed Menus ===');
+      print('Successfully parsed: ${menus.length} / ${data.length} menus');
+      for (var menu in menus) {
+        print('- ${menu.tenMenu} (${menu.maMenu})');
+      }
+      
       setState(() {
-        _menusDangApDung = menus ?? [];
+        _menusDangApDung = menus;
+        _tenKhungGio = response['tenKhungGio'];
+        _timeRemaining = response['timeRemaining'] ?? 0;
+        _isNgayLe = response['isNgayLe'] ?? false; // Parse ngày lễ từ API
         _loadingMenusDangApDung = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Log error chi tiết để debug
+      print('=== DEBUG: Error Loading Menus ===');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      
+      // Hiển thị error message cho user nếu widget còn mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể tải menu. Vui lòng thử lại sau.'),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
       setState(() {
         _menusDangApDung = [];
+        _tenKhungGio = null;
+        _timeRemaining = 0;
+        _isNgayLe = false;
         _loadingMenusDangApDung = false;
       });
     }
@@ -71,14 +186,27 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   Future<void> _loadEMenuData() async {
     setState(() => _loadingEMenu = true);
     try {
+      await _ensureMenuViewModelData();
       final viewModel = Provider.of<MenuViewModel>(context, listen: false);
-      await viewModel.fetchInitialData();
       setState(() {
-        _monAnsTheoDanhMuc = viewModel.monAns ?? [];
-        _danhMucsEMenu = viewModel.danhMucs ?? [];
+        _monAnsTheoDanhMuc = viewModel.monAns;
+        _danhMucsEMenu = viewModel.danhMucs;
         _loadingEMenu = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error loading E-menu data: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể tải thực đơn điện tử. Vui lòng thử lại sau.'),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
       setState(() {
         _monAnsTheoDanhMuc = [];
         _danhMucsEMenu = [];
@@ -98,13 +226,26 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   Future<void> _loadAllMonAns() async {
     setState(() => _loadingAllMon = true);
     try {
+      await _ensureMenuViewModelData();
       final viewModel = Provider.of<MenuViewModel>(context, listen: false);
-      await viewModel.fetchInitialData();
       setState(() {
-        _allMonAns = viewModel.monAns ?? [];
+        _allMonAns = viewModel.monAns;
         _loadingAllMon = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error loading all dishes: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể tải danh sách món ăn. Vui lòng thử lại sau.'),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
       setState(() {
         _allMonAns = [];
         _loadingAllMon = false;
@@ -114,12 +255,15 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
 
   Future<void> _loadCategories() async {
     try {
+      await _ensureMenuViewModelData();
       final viewModel = Provider.of<MenuViewModel>(context, listen: false);
-      await viewModel.fetchInitialData();
       setState(() {
-        _categories = viewModel.danhMucs?.map((dm) => dm.tenDanhMuc).toList() ?? [];
+        _categories = viewModel.danhMucs.map((dm) => dm.tenDanhMuc).toList();
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error loading categories: $e');
+      print('Stack trace: $stackTrace');
+      
       setState(() {
         _categories = [];
       });
@@ -132,11 +276,13 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     // Filter by category
     if (_selectedCategory != null && _selectedCategory!.isNotEmpty) {
       final viewModel = Provider.of<MenuViewModel>(context, listen: false);
+      if (viewModel.danhMucs.isNotEmpty) {
       final category = viewModel.danhMucs.firstWhere(
         (dm) => dm.tenDanhMuc == _selectedCategory,
         orElse: () => viewModel.danhMucs.first,
       );
       filtered = filtered.where((m) => m.maDanhMuc == category.maDanhMuc).toList();
+      }
     }
     
     // Filter by search
@@ -173,26 +319,36 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    return '${hours.toString().padLeft(2, '0')}:${minutes
+      .toString()
+      .padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
-  String _getKhungGioIcon(String? khungGio) {
-    switch (khungGio) {
+  // Lấy icon động theo khung giờ (giống React web)
+  String _getKhungGioIcon(String khungGio) {
+    switch (khungGio.toUpperCase()) {
       case 'SANG':
-        return '🌅';
+      case 'BUỔI SÁNG':
+        return '🌅'; // Sunrise
       case 'TRUA':
-        return '☀️';
+      case 'BUỔI TRƯA':
+        return '☀️'; // Sun
       case 'CHIEU':
-        return '🌆';
+      case 'BUỔI CHIỀU':
+        return '🌆'; // Sunset
       case 'TOI':
-        return '🌙';
+      case 'BUỔI TỐI':
+        return '🌙'; // Moon
       default:
-        return '🍽️';
+        return '🍽️'; // Dining
     }
   }
 
   @override
   void dispose() {
+    // Cleanup timers để tránh memory leak
+    _countdownTimer?.cancel();
+    _refreshTimer?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -200,8 +356,11 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         title: const Text(
           'Thực đơn',
           style: TextStyle(
@@ -214,7 +373,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
           controller: _tabController,
           indicatorColor: Colors.deepPurple.shade700,
           indicatorWeight: 3,
-          labelColor: Colors.deepPurple.shade700,
+          labelColor: Colors.white,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 13,
@@ -250,12 +409,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
+            // Header với gradient và icon động (đồng bộ với React web)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple.shade600, Colors.indigo.shade600],
+                  colors: [Colors.indigo.shade600, Colors.purple.shade600], // Đổi thành indigo -> purple
                 ),
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -264,16 +423,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                 children: [
                   Row(
                     children: [
+                      // Icon động theo khung giờ (giống React web)
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.restaurant_menu,
-                          size: 32,
-                          color: Colors.white,
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          _getKhungGioIcon(_tenKhungGio ?? 'sáng'),
+                          style: const TextStyle(fontSize: 40),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -281,9 +436,9 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Menu Đang Áp Dụng',
-                              style: TextStyle(
+                            Text(
+                              _tenKhungGio != null ? 'Menu $_tenKhungGio' : 'Menu Đang Áp Dụng',
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -291,17 +446,56 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Danh sách menu hiện đang được áp dụng',
+                              _tenKhungGio != null 
+                                ? 'Menu sẽ tự động thay đổi theo khung giờ'
+                                : 'Danh sách menu hiện đang được áp dụng',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.white.withOpacity(0.9),
                               ),
                             ),
+                            // Thông báo ngày lễ (giống React web)
+                            if (_isNgayLe)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '🎉 Menu đặc biệt cho ngày lễ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.yellow.shade200,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ],
                   ),
+                  // Hiển thị countdown timer nếu có
+                  if (_timeRemaining > 0 && _tenKhungGio != null) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Còn lại trong khung giờ này:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                        Text(
+                          _formatTime(_timeRemaining),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ).animate().fadeIn(duration: 600.ms).scale(),
@@ -310,13 +504,13 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
             // Danh sách menu
             if (_menusDangApDung.isEmpty)
               Container(
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           shape: BoxShape.circle,
@@ -327,7 +521,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                           color: Colors.grey.shade400,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       Text(
                         'Chưa có menu nào đang áp dụng',
                         style: TextStyle(
@@ -352,18 +546,21 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
               )
             else
               GridView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
+                cacheExtent: 500, // Cache items ngoài viewport để tối ưu performance
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
+                  childAspectRatio: 0.7,
                 ),
                 itemCount: _menusDangApDung.length,
                 itemBuilder: (context, index) {
                   final menu = _menusDangApDung[index];
-                  return TweenAnimationBuilder<double>(
+                  return RepaintBoundary(
+                    child: TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.0, end: 1.0),
                     duration: Duration(milliseconds: 300 + (index * 50)),
                     curve: Curves.easeOut,
@@ -377,6 +574,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                       );
                     },
                     child: _buildMenuCard(menu, index),
+                    ),
                   );
                 },
               ),
@@ -521,15 +719,18 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                           GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            cacheExtent: 500, // Cache items để tối ưu performance
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
                               childAspectRatio: 0.72,
                             ),
                             itemCount: monAns.length,
                             itemBuilder: (context, index) {
-                              return _buildMonAnCard(monAns[index], index);
+                              return RepaintBoundary(
+                                child: _buildMonAnCard(monAns[index], index),
+                              );
                             },
                           ),
                         ],
@@ -722,17 +923,20 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                       children: [
                         Expanded(
                           child: GridView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(12),
+                            cacheExtent: 500, // Cache items để tối ưu performance
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
                               childAspectRatio: 0.72,
                             ),
                             itemCount: _paginatedMonAns.length,
                             itemBuilder: (context, index) {
                               final monAn = _paginatedMonAns[index];
-                              return _buildMonAnCard(monAn, index);
+                              return RepaintBoundary(
+                                child: _buildMonAnCard(monAn, index),
+                              );
                             },
                           ),
                         ),
@@ -793,11 +997,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         : null;
 
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      margin: const EdgeInsets.all(4),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _showMenuDetail(menu),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -807,7 +1012,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                     child: imageUrl != null
                         ? SizedBox.expand(
                             child: Image.network(
@@ -853,12 +1058,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [Colors.red.shade600, Colors.red.shade400],
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.red.withOpacity(0.3),
@@ -1047,23 +1252,45 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildMonAnCard(MonAn monAn, int index) {
-    final imageUrl = monAn.hinhAnhMonAns.isNotEmpty
-        ? '${ApiConstants.imageBaseUrl}/${monAn.hinhAnhMonAns.first.urlHinhAnh}'
-        : null;
+    // Xử lý hình ảnh - đồng bộ với web (xử lý cả relative và absolute URL)
+    String? imageUrl;
+    if (monAn.hinhAnhMonAns.isNotEmpty) {
+      final rawUrl = monAn.hinhAnhMonAns.first.urlHinhAnh;
+      if (rawUrl.isNotEmpty) {
+        // Nếu đã là absolute URL (http/https), dùng trực tiếp
+        if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+          imageUrl = rawUrl;
+        } else {
+          // Nếu là relative path, ghép với base URL
+          final cleanUrl = rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl;
+          imageUrl = '${ApiConstants.imageBaseUrl}/$cleanUrl';
+        }
+      }
+    }
+    
+    // Kiểm tra trạng thái còn hàng/hết hàng
+    final conHang = monAn.phienBanMonAns.isEmpty 
+        ? true 
+        : monAn.phienBanMonAns.any((pb) => 
+            pb.maTrangThai == null || 
+            pb.maTrangThai!.toUpperCase() != 'HET_HANG');
 
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      margin: const EdgeInsets.all(4),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => _showMonAnDetail(monAn),
-        borderRadius: BorderRadius.circular(20),
+        onTap: conHang ? () => _showMonAnDetail(monAn) : null,
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: imageUrl != null
                     ? SizedBox.expand(
                         child: Image.network(
@@ -1102,15 +1329,35 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                         ),
                         child: Icon(Icons.restaurant_menu, size: 50, color: Colors.deepPurple.shade700),
                       ),
+                  ),
+                  // Overlay "HẾT HÀNG" nếu không còn hàng
+                  if (!conHang)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'HẾT HÀNG',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             Expanded(
               flex: 2,
               child: Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Phần trên: Tên món ăn
                     Column(
@@ -1119,38 +1366,27 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                         Text(
                           monAn.tenMonAn,
                           style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 13.2,
+                            fontWeight: FontWeight.w700,
                             height: 1.2,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        // Hiển thị danh mục nếu có
-                        if (monAn.tenDanhMuc != null && monAn.tenDanhMuc!.isNotEmpty)
-                          Text(
-                            monAn.tenDanhMuc!,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        else
-                          Text(
-                            _getTenDanhMuc(monAn.maDanhMuc),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 2),
+                        Text(
+                          monAn.tenDanhMuc != null && monAn.tenDanhMuc!.isNotEmpty
+                              ? monAn.tenDanhMuc!
+                              : _getTenDanhMuc(monAn.maDanhMuc),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade600,
                           ),
-                        // Hiển thị các phiên bản (size) nếu có
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         if (monAn.phienBanMonAns.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
                             monAn.phienBanMonAns.length == 1
                                 ? '${monAn.phienBanMonAns.first.tenPhienBan}'
@@ -1166,19 +1402,41 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                         ],
                       ],
                     ),
-                    // Phần dưới: Giá
+                    const SizedBox(height: 4),
+                    // Phần dưới: Giá - đồng bộ với web
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Hiển thị giá từ phiên bản hoặc giá mặc định
-                        if (monAn.phienBanMonAns.isNotEmpty)
-                          // Nếu có nhiều phiên bản, hiển thị khoảng giá
-                          monAn.phienBanMonAns.length > 1
-                              ? Column(
+                        Builder(
+                          builder: (context) {
+                            if (monAn.phienBanMonAns.isNotEmpty) {
+                              final prices = monAn.phienBanMonAns
+                                  .where((pb) => pb.gia > 0)
+                                  .map((pb) => pb.gia)
+                                  .toList();
+                              
+                              if (prices.isEmpty) {
+                                return Text(
+                                  'Liên hệ',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                );
+                              }
+                              
+                              final minPrice = prices.reduce((a, b) => a < b ? a : b);
+                              final maxPrice = prices.reduce((a, b) => a > b ? a : b);
+                              
+                              // Nếu có nhiều phiên bản với giá khác nhau, hiển thị khoảng giá
+                              if (monAn.phienBanMonAns.length > 1 && minPrice != maxPrice) {
+                                return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '${NumberFormat("#,###").format(monAn.phienBanMonAns.map((pb) => pb.gia).reduce((a, b) => a < b ? a : b).toInt())} đ',
+                                      '${NumberFormat("#,###").format(minPrice.toInt())} đ',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -1186,40 +1444,45 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                                       ),
                                     ),
                                     Text(
-                                      '- ${NumberFormat("#,###").format(monAn.phienBanMonAns.map((pb) => pb.gia).reduce((a, b) => a > b ? a : b).toInt())} đ',
+                                      '- ${NumberFormat("#,###").format(maxPrice.toInt())} đ',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: Colors.grey.shade600,
                                       ),
                                     ),
                                   ],
-                                )
-                              // Nếu chỉ có 1 phiên bản, hiển thị giá của nó
-                              : Text(
-                                  '${NumberFormat("#,###").format(monAn.phienBanMonAns.first.gia.toInt())} đ',
+                                );
+                              } else {
+                                // Nếu chỉ có 1 phiên bản hoặc tất cả cùng giá, hiển thị giá duy nhất
+                                return Text(
+                                  '${NumberFormat("#,###").format(minPrice.toInt())} đ',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.deepPurple.shade700,
                                   ),
-                                )
-                        else if (monAn.gia > 0)
-                          Text(
+                                );
+                              }
+                            } else if (monAn.gia > 0) {
+                              return Text(
                             '${NumberFormat("#,###").format(monAn.gia.toInt())} đ',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.deepPurple.shade700,
                             ),
-                          )
-                        else
-                          Text(
+                              );
+                            } else {
+                              return Text(
                             'Liên hệ',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey.shade600,
                             ),
+                              );
+                            }
+                          },
                           ),
                       ],
                     ),
@@ -1237,12 +1500,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
 
   Widget _buildShimmerGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.75,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
+        childAspectRatio: 0.7,
       ),
       itemCount: 6,
       itemBuilder: (context, index) {
@@ -1675,9 +1938,39 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   }
 
   void _showMonAnDetail(MonAn monAn) {
-    final imageUrl = monAn.hinhAnhMonAns.isNotEmpty
-        ? '${ApiConstants.imageBaseUrl}/${monAn.hinhAnhMonAns.first.urlHinhAnh}'
-        : null;
+    // Xử lý hình ảnh - đồng bộ với web
+    String? imageUrl;
+    if (monAn.hinhAnhMonAns.isNotEmpty) {
+      final rawUrl = monAn.hinhAnhMonAns.first.urlHinhAnh;
+      if (rawUrl.isNotEmpty) {
+        if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+          imageUrl = rawUrl;
+        } else {
+          final cleanUrl = rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl;
+          imageUrl = '${ApiConstants.imageBaseUrl}/$cleanUrl';
+        }
+      }
+    }
+    
+    // Tính giá để hiển thị
+    String priceText = 'Liên hệ';
+    if (monAn.phienBanMonAns.isNotEmpty) {
+      final prices = monAn.phienBanMonAns
+          .where((pb) => pb.gia > 0)
+          .map((pb) => pb.gia)
+          .toList();
+      if (prices.isNotEmpty) {
+        final minPrice = prices.reduce((a, b) => a < b ? a : b);
+        final maxPrice = prices.reduce((a, b) => a > b ? a : b);
+        if (minPrice == maxPrice) {
+          priceText = '${NumberFormat("#,###").format(minPrice.toInt())} đ';
+        } else {
+          priceText = '${NumberFormat("#,###").format(minPrice.toInt())} - ${NumberFormat("#,###").format(maxPrice.toInt())} đ';
+        }
+      }
+    } else if (monAn.gia > 0) {
+      priceText = '${NumberFormat("#,###").format(monAn.gia.toInt())} đ';
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1738,13 +2031,67 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                         ),
                       ),
                     const SizedBox(height: 16),
+                    // Hiển thị giá - đồng bộ với web
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Giá',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                     Text(
-                      'Giá: ${NumberFormat("#,###").format(monAn.gia)} đ',
+                          priceText,
                       style: TextStyle(
                         fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigo.shade600,
+                          ),
+                        ),
+                        // Hiển thị danh sách phiên bản nếu có nhiều
+                        if (monAn.phienBanMonAns.length > 1) ...[
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Phiên bản & Giá',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...monAn.phienBanMonAns.map((pb) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    pb.tenPhienBan,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${NumberFormat("#,###").format(pb.gia.toInt())} đ',
+                                    style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.indigo.shade600,
                       ),
+                    ),
+                  ],
+                ),
+                            );
+                          }),
+                        ],
+                      ],
                     ),
                   ],
                 ),

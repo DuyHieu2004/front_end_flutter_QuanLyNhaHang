@@ -249,16 +249,39 @@ class _HomeContentState extends State<_HomeContent> {
     });
 
     try {
+      // Đồng bộ với React web home: gọi DangApDung thay vì HienTai
+      // React web HomeTab.tsx line 25: getMenuDangApDung() và lấy 6 menu đầu
       final menus = await _menuService.fetchMenusDangApDung();
+      
       setState(() {
-        _menus = menus;
+        // Lấy tối đa 6 menu như React web
+        _menus = menus.take(6).toList();
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error loading menus in home screen: $e');
+      print('Stack trace: $stackTrace');
+      
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
+      
+      // Hiển thị error message cho user nếu widget còn mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể tải menu. Vui lòng thử lại sau.'),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Thử lại',
+              textColor: Colors.white,
+              onPressed: () => _loadMenus(),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -845,6 +868,7 @@ class _SpecialMenuList extends StatelessWidget {
 
     // Hiển thị menu đặc biệt theo dạng GridView 2 cột
     return GridView.builder(
+      cacheExtent: 500, // Cache items để tối ưu performance
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -856,10 +880,12 @@ class _SpecialMenuList extends StatelessWidget {
       itemCount: displayMenus.length,
       itemBuilder: (context, index) {
         final menu = displayMenus[index];
-        return _MenuCard(
-          menu: menu,
-          index: index,
-          onTap: () => _showMenuDetail(context, menu),
+        return RepaintBoundary(
+          child: _MenuCard(
+            menu: menu,
+            index: index,
+            onTap: () => _showMenuDetail(context, menu),
+          ),
         );
       },
     );

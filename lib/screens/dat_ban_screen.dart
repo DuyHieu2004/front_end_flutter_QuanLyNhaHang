@@ -213,7 +213,34 @@ class _DatBanScreenState extends State<DatBanScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text('Lỗi kết nối: ${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Lỗi kết nối',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            '${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _loadFilteredTables(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text('Không tìm thấy dữ liệu bàn.'));
@@ -387,32 +414,35 @@ class _DatBanScreenState extends State<DatBanScreen> {
                         ),
                       Expanded(
                         child: GridView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.85,
-                      crossAxisSpacing: 12.0,
-                      mainAxisSpacing: 12.0,
-                    ),
-                    itemCount: displayBanAns.length,
-                    itemBuilder: (context, index) {
-                      final banAn = displayBanAns[index];
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(milliseconds: 300 + (index * 50)),
-                        curve: Curves.easeOut,
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: Opacity(
-                              opacity: value,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _buildTableCard(context, banAn),
-                      );
-                    },
+                          padding: const EdgeInsets.all(16.0),
+                          cacheExtent: 500, // Cache items để tối ưu performance
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            childAspectRatio: 0.85,
+                            crossAxisSpacing: 12.0,
+                            mainAxisSpacing: 12.0,
+                          ),
+                          itemCount: displayBanAns.length,
+                          itemBuilder: (context, index) {
+                            final banAn = displayBanAns[index];
+                            return RepaintBoundary(
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                duration: Duration(milliseconds: 300 + (index * 50)),
+                                curve: Curves.easeOut,
+                                builder: (context, value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: Opacity(
+                                      opacity: value,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: _buildTableCard(context, banAn),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -985,10 +1015,14 @@ class _DatBanScreenState extends State<DatBanScreen> {
                   const Text('Chưa có món nào', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
                 else
                   ...monAns.map((m) {
+                    // Xử lý cả PascalCase và camelCase
                     final tenMon = m['tenMon'] ?? m['TenMon'] ?? m['tenMonAn'] ?? m['TenMonAn'] ?? 'N/A';
-                    final soLuong = m['soLuong'] ?? m['SoLuong'] ?? 0;
+                    final tenPhienBan = m['tenPhienBan'] ?? m['TenPhienBan'] ?? '';
+                    final soLuong = (m['soLuong'] ?? m['SoLuong'] ?? 0) is int 
+                        ? (m['soLuong'] ?? m['SoLuong'] ?? 0) 
+                        : int.tryParse((m['soLuong'] ?? m['SoLuong'] ?? 0).toString()) ?? 0;
                     final donGia = (m['donGia'] ?? m['DonGia'] ?? 0).toDouble();
-                    final thanhTien = soLuong * donGia;
+                    final thanhTien = donGia * soLuong;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
@@ -998,7 +1032,9 @@ class _DatBanScreenState extends State<DatBanScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(tenMon, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                Text(tenMon.toString(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                                if (tenPhienBan.toString().isNotEmpty)
+                                  Text(tenPhienBan.toString(), style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                 Text('x$soLuong', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                               ],
                             ),
@@ -1012,24 +1048,74 @@ class _DatBanScreenState extends State<DatBanScreen> {
                     );
                   }),
                 
-                // Tổng tiền
-                if (tongTien > 0) ...[
-                  const Divider(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Tổng tiền:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text(
-                        '${_formatCurrency(tongTien)} đ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                // Tính tổng tiền từ danh sách món (nếu không có từ API)
+                Builder(
+                  builder: (context) {
+                    final calculatedTotal = monAns.fold<double>(0.0, (sum, m) {
+                      final donGia = (m['donGia'] ?? m['DonGia'] ?? 0).toDouble();
+                      final soLuong = (m['soLuong'] ?? m['SoLuong'] ?? 0) is int 
+                          ? (m['soLuong'] ?? m['SoLuong'] ?? 0) 
+                          : int.tryParse((m['soLuong'] ?? m['SoLuong'] ?? 0).toString()) ?? 0;
+                      return sum + (donGia * soLuong);
+                    });
+                    final finalTotal = tongTien > 0 ? tongTien : calculatedTotal;
+                    final tienDatCoc = (detail['tienDatCoc'] ?? detail['TienDatCoc'] ?? 0).toDouble();
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tổng tiền
+                        if (finalTotal > 0) ...[
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Tổng tiền:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(
+                                '${_formatCurrency(finalTotal)} đ',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        
+                        // Hiển thị tiền đặt cọc và số tiền cần thanh toán
+                        if (tienDatCoc > 0) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Đã đặt cọc:', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                              Text(
+                                '- ${_formatCurrency(tienDatCoc)} đ',
+                                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Cần thanh toán:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange)),
+                              Text(
+                                '${_formatCurrency(finalTotal - tienDatCoc)} đ',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),
