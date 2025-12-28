@@ -1354,7 +1354,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
             Expanded(
               flex: 2,
               child: Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -1402,7 +1402,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                         ],
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     // Phần dưới: Giá - đồng bộ với web
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
