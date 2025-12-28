@@ -249,13 +249,13 @@ class _HomeContentState extends State<_HomeContent> {
     });
 
     try {
-      // Dùng fetchMenuHienTai() để đồng bộ với React web
-      final response = await _menuService.fetchMenuHienTai();
-      final data = response['data'] ?? [];
-      final menus = (data as List).map((m) => Menu.fromJson(m)).toList();
+      // Đồng bộ với React web home: gọi DangApDung thay vì HienTai
+      // React web HomeTab.tsx line 25: getMenuDangApDung() và lấy 6 menu đầu
+      final menus = await _menuService.fetchMenusDangApDung();
       
       setState(() {
-        _menus = menus;
+        // Lấy tối đa 6 menu như React web
+        _menus = menus.take(6).toList();
         _isLoading = false;
       });
     } catch (e, stackTrace) {

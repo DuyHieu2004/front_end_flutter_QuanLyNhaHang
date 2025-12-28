@@ -38,6 +38,20 @@ class Menu {
   }
 
   factory Menu.fromJson(Map<String, dynamic> json) {
+    // Helper để parse DateTime an toàn
+    DateTime? parseDateTime(dynamic value) {
+      if (value == null) return null;
+      try {
+        if (value is String && value.isNotEmpty) {
+          return DateTime.parse(value);
+        }
+        return null;
+      } catch (e) {
+        print('Warning: Failed to parse DateTime: $value - $e');
+        return null;
+      }
+    }
+
     return Menu(
       maMenu: json['maMenu'] ?? json['MaMenu'] ?? '',
       tenMenu: json['tenMenu'] ?? json['TenMenu'] ?? '',
@@ -51,12 +65,8 @@ class Menu {
               : null),
       moTa: json['moTa'] ?? json['MoTa'],
       hinhAnh: json['hinhAnh'] ?? json['HinhAnh'],
-      ngayBatDau: json['ngayBatDau'] != null 
-          ? DateTime.parse(json['ngayBatDau'])
-          : (json['NgayBatDau'] != null ? DateTime.parse(json['NgayBatDau']) : null),
-      ngayKetThuc: json['ngayKetThuc'] != null
-          ? DateTime.parse(json['ngayKetThuc'])
-          : (json['NgayKetThuc'] != null ? DateTime.parse(json['NgayKetThuc']) : null),
+      ngayBatDau: parseDateTime(json['ngayBatDau'] ?? json['NgayBatDau']),
+      ngayKetThuc: parseDateTime(json['ngayKetThuc'] ?? json['NgayKetThuc']),
       chiTietMenus: json['chiTietMenus'] != null
           ? (json['chiTietMenus'] as List).map((e) => ChiTietMenu.fromJson(e)).toList()
           : (json['ChiTietMenus'] != null

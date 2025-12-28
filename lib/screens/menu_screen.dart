@@ -31,6 +31,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
   bool _loadingMenusDangApDung = false;
   String? _tenKhungGio;
   int _timeRemaining = 0;
+  bool _isNgayLe = false; // Thêm để hiển thị thông báo ngày lễ
   
   // Timers để tránh memory leak
   Timer? _countdownTimer;
@@ -115,19 +116,50 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
       // Dùng fetchMenuHienTai() để đồng bộ với React web
       final response = await _menuService.fetchMenuHienTai();
       
-      // Parse response giống React web
+      // DEBUG: Log raw response để troubleshoot
+      print('=== DEBUG: Menu API Response ===');
+      print('Response type: ${response.runtimeType}');
+      print('Response keys: ${response.keys}');
+      print('tenKhungGio: ${response['tenKhungGio']}');
+      print('isNgayLe: ${response['isNgayLe']}');
+      print('Data type: ${response['data']?.runtimeType}');
+      print('Data length: ${(response['data'] as List?)?.length ?? 0}');
+      
+      // Parse response giống React web - với error handling cho từng menu
       final data = response['data'] ?? [];
-      final menus = (data as List).map((m) => Menu.fromJson(m)).toList();
+      final List<Menu> menus = [];
+      
+      // Parse từng menu với error handling
+      for (int i = 0; i < (data as List).length; i++) {
+        try {
+          final menuJson = data[i];
+          final menu = Menu.fromJson(menuJson);
+          menus.add(menu);
+        } catch (e) {
+          print('=== WARNING: Failed to parse menu at index $i ===');
+          print('Error: $e');
+          print('Menu JSON: ${data[i]}');
+          // Continue parsing other menus
+        }
+      }
+      
+      print('=== DEBUG: Parsed Menus ===');
+      print('Successfully parsed: ${menus.length} / ${data.length} menus');
+      for (var menu in menus) {
+        print('- ${menu.tenMenu} (${menu.maMenu})');
+      }
       
       setState(() {
         _menusDangApDung = menus;
         _tenKhungGio = response['tenKhungGio'];
         _timeRemaining = response['timeRemaining'] ?? 0;
+        _isNgayLe = response['isNgayLe'] ?? false; // Parse ngày lễ từ API
         _loadingMenusDangApDung = false;
       });
     } catch (e, stackTrace) {
       // Log error chi tiết để debug
-      print('Error loading menus: $e');
+      print('=== DEBUG: Error Loading Menus ===');
+      print('Error: $e');
       print('Stack trace: $stackTrace');
       
       // Hiển thị error message cho user nếu widget còn mounted
@@ -145,6 +177,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         _menusDangApDung = [];
         _tenKhungGio = null;
         _timeRemaining = 0;
+        _isNgayLe = false;
         _loadingMenusDangApDung = false;
       });
     }
@@ -286,7 +319,29 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    return '${hours.toString().padLeft(2, '0')}:${minutes
+      .toString()
+      .padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  // Lấy icon động theo khung giờ (giống React web)
+  String _getKhungGioIcon(String khungGio) {
+    switch (khungGio.toUpperCase()) {
+      case 'SANG':
+      case 'BUỔI SÁNG':
+        return '🌅'; // Sunrise
+      case 'TRUA':
+      case 'BUỔI TRƯA':
+        return '☀️'; // Sun
+      case 'CHIEU':
+      case 'BUỔI CHIỀU':
+        return '🌆'; // Sunset
+      case 'TOI':
+      case 'BUỔI TỐI':
+        return '🌙'; // Moon
+      default:
+        return '🍽️'; // Dining
+    }
   }
 
   @override
@@ -354,12 +409,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
+            // Header với gradient và icon động (đồng bộ với React web)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple.shade600, Colors.indigo.shade600],
+                  colors: [Colors.indigo.shade600, Colors.purple.shade600], // Đổi thành indigo -> purple
                 ),
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -368,16 +423,12 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                 children: [
                   Row(
                     children: [
+                      // Icon động theo khung giờ (giống React web)
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.restaurant_menu,
-                          size: 32,
-                          color: Colors.white,
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          _getKhungGioIcon(_tenKhungGio ?? 'sáng'),
+                          style: const TextStyle(fontSize: 40),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -403,6 +454,18 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                                 color: Colors.white.withOpacity(0.9),
                               ),
                             ),
+                            // Thông báo ngày lễ (giống React web)
+                            if (_isNgayLe)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '🎉 Menu đặc biệt cho ngày lễ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.yellow.shade200,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
